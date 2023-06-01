@@ -1,0 +1,7 @@
+# Simulation files
+*.wlf
+*.toml
+*.mpf
+*.mti
+*.do
+work/

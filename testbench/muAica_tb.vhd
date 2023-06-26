@@ -3,17 +3,18 @@ use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
 use work.muAica_pkg.all;
 
-entity aica_tb is
-end entity aica_tb;
+entity muAica_tb is
+end entity muAica_tb;
 
-architecture behavior of aica_tb is
+architecture behavior of muAica_tb is
 
   -- processor top module component
   COMPONENT muAica is
     port (
       clk       : in    std_logic;
       rst_bt    : in    std_logic;
-      intr      : in    std_logic
+      port_io : inout std_logic_vector (n-1 downto 0); -- configurable IO port
+      intr    : in std_logic
     );
   end COMPONENT muAica;
 
@@ -23,7 +24,8 @@ architecture behavior of aica_tb is
 
   constant half_period : time := 5 ns;
 
-  signal  intr_sig: std_logic;
+  signal  intr_sig : std_logic;
+  signal  port_io_sig  : std_logic_vector (n-1 downto 0); -- interface with microcontroller port
 
 begin
 
@@ -54,10 +56,14 @@ begin
   port map(
     clk     => clk,
     rst_bt  => rst_bt,
-    intr    => intr_sig
+    port_io => port_io_sig,
+    intr => intr_sig
   );
 
 
-  intr_sig <= '0', '1' after 300 ns, '0' after 350 ns;
+  intr_sig <= '0', '1' after 500 ns, '0' after 550 ns;
+  port_io_sig(3 downto 0) <= "0001", "0010" after 800 ns, "0100" after 1000 ns, "1000" after 1200 ns, "1001" after 1400 ns, "1111" after 1600 ns;
+  port_io_sig(31 downto 4) <= (others => 'Z');
+-- port_io_sig(3 downto 0) <= x"1";
 
 end architecture behavior;

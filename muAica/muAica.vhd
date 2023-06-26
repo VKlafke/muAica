@@ -9,8 +9,8 @@ entity muAica is
   (
     clk     : in    std_logic;    -- clock input
     rst_bt  : in    std_logic;    -- reset input (it's gonna pass through debounce logic)
-    intr    : in    std_logic
-    --- UART
+    port_io : inout std_logic_vector (n-1 downto 0); -- configurable IO port
+    intr    : in std_logic -- external interrupt signal
   );
 end entity muAica;
 
@@ -39,10 +39,13 @@ architecture behavior of muAica is
   signal  core_ddata : std_logic_vector(n-1 downto 0);
   signal  data_in_inst : std_logic_vector(n-1 downto 0);
   signal  addr_data : std_logic_vector(n-1 downto 0);
-  signal  data_data1 : std_logic_vector(n-1 downto 0);
+  signal  addr_prph : std_logic_vector(7 downto 0);
   
-  signal  data_out : std_logic_vector(n-1 downto 0);  -- data memory output
-  signal  data_in : std_logic_vector(n-1 downto 0); -- data memory input
+
+  signal  data_o_dm : std_logic_vector(n-1 downto 0);  -- Data memory
+
+  signal  data_bus : std_logic_vector(n-1 downto 0);  -- Data memory / peripherals bus
+  signal  data_in : std_logic_vector(n-1 downto 0); -- Data memory / peripherals input
   signal  wbe       : std_logic_vector(3 downto 0);
   
   constant RISCV_INSTRUCTION_OFFSET    : std_logic_vector(31 downto 0) := x"00000000";
@@ -51,16 +54,21 @@ architecture behavior of muAica is
   -- Core control to/from Cache
   signal  stall_icache  : std_logic;
   signal  valid_iaddr   : std_logic;
-  signal  wait_i        : std_logic;
   signal  valid_daddr   : std_logic;
   signal  sb_en         : std_logic;
   signal  sh_en         : std_logic;
   signal  we            : std_logic;
+  signal  wait_d        : std_logic;
+  signal  ce_inst        : std_logic;
   
-  signal  ce_data            : std_logic;
+  -- Peripherals
   
-  signal  io_intr     : std_logic;
-  
+  signal  data_i_bdP : std_logic_vector(n-1 downto 0);  -- bidirectional port data in
+  signal  data_o_bdP : std_logic_vector(n-1 downto 0);  -- bidirectional port data out
+  signal  port_io_sig : std_logic_vector(n-1 downto 0);  -- test
+
+  signal  ce_dm         : std_logic;
+  signal  ce_bdP        : std_logic;
   
   
 begin
@@ -89,8 +97,8 @@ begin
     stall_icache  => stall_icache,
     valid_iaddr   => valid_iaddr,
     valid_daddr   => valid_daddr,
-    wait_i        => '0',
-    wait_d        => '0',
+    wait_i        => wait_d,
+    wait_d        => wait_d,
     sb_en         => sb_en ,
     sh_en         => sh_en ,
     addr_icache   => addr_inst ,
@@ -99,67 +107,112 @@ begin
     data_dcache   => core_ddata
   );
 
+  --core_ddata <= data_o_bdP when (ce_bdP = '1' AND we = '0') else 
+  --              (others => 'Z');
 
-  
   MEMORY_CONTROL:	entity work.MemoryCtrl(behavioral)
 	port map (
 		clock	=> clk,
 		rst		=> rst,
+    
+    -- Interface to core (instruction memory)
 		core_iaddr => addr_inst,
 		core_idata => core_idata,
 		valid_iaddr => valid_iaddr,
 		stall_icache => stall_icache,
+
+    -- Interface to instruction memory
+    ce_inst   => ce_inst,
 		inst_addr => mem_iaddr,
 		inst_data => mem_idata,
-		-- Data memory, from core 
+
+		-- Interface to core (data memory)
 		core_daddr 	=> core_daddr,
 		core_ddata	=> core_ddata,
 		valid_daddr => valid_daddr,
 		we			=> we,
 		sb_en		=> sb_en,
 		sh_en		=> sh_en,
-		-- To data memory
+    wait_d  => wait_d,
+
+		-- Interface with data memory / peripherals
 		addr_data	=> addr_data,
-		mem_data_in		=> data_in,
-		mem_data_out	=> data_out, 
+    addr_prph => addr_prph,
+		data_in		=> data_bus,
+		data_out	=> data_in, 
 		wbe    		=> wbe,
-		ce			=> ce_data
+		ce_dm			=> ce_dm,
+    ce_bdP    => ce_bdP
 	);
   
+data_bus <=   data_o_bdP when ce_bdP = '1' else
+              data_o_dm;
+
+------------------------------------------------------
+-- Peripherals
+--
+  BD_PORT : entity work.BDPort(behavioral)
+  generic map (
+      DATA_WIDTH => n,
+      PORT_DATA_ADDR   => "00000010",
+      PORT_CONFIG_ADDR => "00000001",
+      PORT_ENABLE_ADDR => "00000000",
+      PORT_ITR_ADDR    => "00000011"
+  )
+  port map (
+      clk => clk, 
+      rst => rst,
+
+      address => addr_prph,
+      data_i  => data_i_bdP,
+      data_o  => data_o_bdP,
+
+      ce => ce_bdP,
+      rw => we,
+
+      port_io => port_io
+  );
+
+  data_i_bdP <= data_in when (ce_bdP = '1' AND we = '1') else
+                (others => 'Z');
+
+------------------------------------------------------
+-- Memories
+--
   INSTRUCTION_MEMORY: entity work.Memory(behavioral)
 	generic map (
 		SIZE            => 4096,                                  -- Memory depth 
-		ADDR_WIDTH		=> 32,
-		COL_WIDTH		=> 8,
-		NB_COL			=> 4,
+		ADDR_WIDTH		  => 32,
+		COL_WIDTH		    => 8,
+		NB_COL		    	=> 4,
 		imageFileName   => "code.txt",
 		OFFSET          => UNSIGNED(RISCV_INSTRUCTION_OFFSET)   -- initial address (mapped to memory address 0x00000000)
 	)
 	port map (
-		clock           => clk,
+		clock     => clk,
 		wbe				=> "0000", -- we ?
-		ce              => '1',
-		address         => mem_iaddr, --instructionAddress(31 downto 2), -- Converts byte address to word address     
-		data_i          => data_in_inst,
-		data_o          => mem_idata
+		ce        => ce_inst,
+		address   => mem_iaddr,  
+		data_i    => data_in_inst,
+		data_o    => mem_idata
 	);
 	
 DATA_MEMORY: entity work.Memory(behavioral)
 	generic map (
 		SIZE            => 4096,                         -- Memory depth 
-		ADDR_WIDTH		=> 32,
-		COL_WIDTH		=> 8,
-		NB_COL			=> 4,
+		ADDR_WIDTH		  => 32,
+		COL_WIDTH		    => 8,
+		NB_COL			    => 4,
 		imageFileName   => "data.txt",
 		OFFSET          => UNSIGNED(RISCV_DATA_OFFSET)  -- initial address
 	)
 	port map (
-		clock           => clk,
+		clock     => clk,
 		wbe				=> wbe, -- we ?
-		ce              => ce_data,
-		address         => addr_data, --dataAddress(31 downto 2),    -- Converts byte address to word address 
-		data_i          => data_in,
-		data_o          => data_out
+		ce        => ce_dm,
+		address   => addr_data, 
+		data_i    => data_in,
+		data_o    => data_o_dm
 	);   
 	
 

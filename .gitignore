@@ -5,3 +5,7 @@
 *.mti
 *.do
 work/
+
+# Code files
+code.txt
+data.txt

@@ -67,6 +67,7 @@ architecture behavioral of MemoryCtrl is
 	signal  data_out_sig	: std_logic_vector(n-1 downto 0);
 	signal  data_core_sig	: std_logic_vector(n-1 downto 0);
 	signal  data_reg_sig	: std_logic_vector(n-1 downto 0);
+	signal  last_wr_addr	: std_logic_vector(n-1 downto 0);
 
 	-- Peripherals signals
 	signal  addr_p		    : std_logic_vector(7 downto 0);
@@ -128,8 +129,8 @@ begin
 		
 	-- Out to core 
 		-- data_reg_sig goes out when doing read after write
-	core_ddata <= data_core_sig when ((currentState = st_Mem_Exec OR currentState = st_Prph_Exec) AND we = '0') else 
-				  data_reg_sig when currentState = st_RaW 				   else 
+	core_ddata <= data_core_sig when (((currentState = st_Mem_Exec AND addr_data_reg(n-1 downto 0) /= last_wr_addr(n-1 downto 0)) OR currentState = st_Prph_Exec) AND we = '0') else 
+				  data_reg_sig when currentState = st_RaW OR (currentState = st_Mem_Exec AND addr_data_reg(n-1 downto 0) = last_wr_addr(n-1 downto 0) AND we = '0')				   else 
 				  (others => 'Z');
 	------------------------------------------------------------------------------------------------
 	
@@ -209,7 +210,7 @@ begin
 			currentState <= st_Idle;
 		elsif rising_edge(clock) then 
 
-			if valid_iaddr = '1' then 
+			if valid_iaddr = '1' AND stall_icache = '0'  then 
 				lastValidiAddr <= addr_imem;
 			end if;
 
@@ -249,6 +250,7 @@ begin
 					end if;
 				
 					if we = '1' then 
+						last_wr_addr <= addr_data_reg(n-1 downto 0);
 						data_reg <= (data_out_sig AND wbe_extended) OR (data_in AND not wbe_extended);
 					end if;
 

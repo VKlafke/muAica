@@ -4,6 +4,7 @@
 *.mpf
 *.mti
 *.do
+*.vstf
 work/
 
 # Code files

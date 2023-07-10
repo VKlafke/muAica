@@ -36,7 +36,8 @@ entity MemoryCtrl is
 	data_out 	 : out  std_logic_vector(n-1 downto 0);
 	data_in 	 : in std_logic_vector(n-1 downto 0);
     ce_dm	     : out std_logic;
-	ce_bdP	     : out std_logic
+	ce_bdP	     : out std_logic;
+	ce_PIC		 : out std_logic
   );
 end entity MemoryCtrl;
 
@@ -179,7 +180,7 @@ begin
 					  addr_data_reg(31) when currentState /= st_Idle; -- MSB of addr controls access to peripherals. 0: memory, 1: peripherals
 
 	-- Used to address the peripheral being accessed
-	addr_p <= core_daddr(19 downto 12) when ((valid_daddr = '1' AND we = '0') AND prph_en = '1') else 
+	addr_p <= --core_daddr(19 downto 12) when ((valid_daddr = '1' AND we = '0') AND prph_en = '1') else 
 			  addr_data_reg(19 downto 12) when prph_en = '1' else
 			  (others => '0');
 
@@ -192,6 +193,10 @@ begin
 	
 	-- Bidirectional Port enable
 	ce_bdP <= '1' when (currentState = st_Prph_Exec AND addr_p = BDPort_Addr) 	else 
+			  '0';
+
+	-- PIC enable
+	ce_PIC <= '1' when (currentState = st_Prph_Exec AND addr_p = PIC_Addr) else 
 			  '0';
   
 	--wait_d <= '0';
@@ -238,7 +243,10 @@ begin
 				-- Executing a data memory read / write
 				WHEN st_Mem_Exec =>
 
-					if valid_daddr = '1' AND we = '1' AND addr_data_reg(n-1 downto 2) = core_daddr(n-1 downto 2) then
+					if valid_daddr = '1' AND we = '1' AND addr_data_reg(n-1 downto 0) /= core_daddr(n-1 downto 0) then
+						currentState <= st_Mem_Wait;
+						wait_d <= '1';
+					elsif valid_daddr = '1' AND we = '1' AND addr_data_reg(n-1 downto 2) = core_daddr(n-1 downto 2) then
 						currentState <= st_RaW;
 					elsif valid_daddr = '1' AND we = '1' AND addr_data_reg(n-1 downto 2) /= core_daddr(n-1 downto 2) then
 						currentState <= st_Mem_Wait;

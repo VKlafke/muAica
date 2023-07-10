@@ -9,8 +9,7 @@ entity muAica is
   (
     clk     : in    std_logic;    -- clock input
     rst_bt  : in    std_logic;    -- reset input (it's gonna pass through debounce logic)
-    port_io : inout std_logic_vector (n-1 downto 0); -- configurable IO port
-    intr    : in std_logic -- external interrupt signal
+    port_io : inout std_logic_vector (n-1 downto 0) -- configurable IO port
   );
 end entity muAica;
 
@@ -65,10 +64,18 @@ architecture behavior of muAica is
   
   signal  data_i_bdP : std_logic_vector(n-1 downto 0);  -- bidirectional port data in
   signal  data_o_bdP : std_logic_vector(n-1 downto 0);  -- bidirectional port data out
-  signal  port_io_sig : std_logic_vector(n-1 downto 0);  -- test
+  
 
-  signal  ce_dm         : std_logic;
-  signal  ce_bdP        : std_logic;
+  signal itrBus		: std_logic_vector(n-1 downto 0); -- Configurable interrupt signal bus from BDPort to PIC
+
+  signal  data_o_PIC    : std_logic_vector(7 downto 0);  -- PIC data out
+  
+  signal  ce_dm         : std_logic; -- Data memory enable
+  signal  ce_bdP        : std_logic; -- Bidirectional port enable
+  signal  ce_PIC        : std_logic; -- PIC enable
+
+  
+  signal  intr_p        : std_logic; -- PIC -> Core intr signal
   
   
 begin
@@ -92,7 +99,7 @@ begin
   port map(
     rst           => rst ,
     clk           => clk ,
-    intr          => intr,
+    intr          => intr_p,
     we            => we ,
     stall_icache  => stall_icache,
     valid_iaddr   => valid_iaddr,
@@ -142,10 +149,12 @@ begin
 		data_out	=> data_in, 
 		wbe    		=> wbe,
 		ce_dm			=> ce_dm,
-    ce_bdP    => ce_bdP
+    ce_bdP    => ce_bdP,
+    ce_PIC    => ce_PIC
 	);
   
 data_bus <=   data_o_bdP when ce_bdP = '1' else
+              x"000000" & data_o_PIC when ce_PIC = '1' else
               data_o_dm;
 
 ------------------------------------------------------
@@ -170,11 +179,31 @@ data_bus <=   data_o_bdP when ce_bdP = '1' else
       ce => ce_bdP,
       rw => we,
 
+      itr_o => itrBus,
+
       port_io => port_io
   );
 
   data_i_bdP <= data_in when (ce_bdP = '1' AND we = '1') else
                 (others => 'Z');
+
+   	PIC: entity work.InterruptController
+		generic map (
+			IRQ_ID_ADDR		=> "00000000",
+			INT_ACK_ADDR	=> "00000001",
+			MASK_ADDR		  => "00000010"
+		)
+		port map (  
+			clk 	   => clk,
+			rst 	   => rst,			
+			data_in  => data_in(7 downto 0),
+			data_out => data_o_PIC,
+			address  => addr_prph,
+			rw		   => we,
+			ce		   => ce_PIC,
+			intr 	   => intr_p,
+			irq		   => itrBus(31 downto 24)
+		);             
 
 ------------------------------------------------------
 -- Memories

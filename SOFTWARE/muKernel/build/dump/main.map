@@ -1,0 +1,74 @@
+
+Memory Configuration
+
+Name             Origin             Length             Attributes
+INSTRUCTION_MEMORY 0x00000000         0x00001000
+DATA_MEMORY      0x00000000         0x00001000
+*default*        0x00000000         0xffffffff
+
+Linker script and memory map
+
+LOAD obj/muKernel-s.o
+LOAD obj/syscall.obj
+LOAD obj/muKernel.o
+LOAD obj/main.o
+                0x00000100                        STACK_SIZE = 0x100
+
+.text           0x00000000      0x52c
+ *(.text*)
+ .text          0x00000000      0x148 obj/muKernel-s.o
+ .text          0x00000148       0x30 obj/syscall.obj
+                0x00000148                BDPort_Setup
+                0x00000154                BDPort_Read
+                0x00000160                BDPort_Write
+                0x0000016c                PIC_Mask
+ .text          0x00000178      0x32c obj/muKernel.o
+                0x00000178                trap_handler
+                0x00000300                ext_intr_handler
+                0x000003f0                Kernel_BDPort_Setup
+                0x00000444                Kernel_BDPort_Read
+                0x00000474                Kernel_BDPort_Write
+ .text          0x000004a4       0x88 obj/main.o
+                0x000004a4                main
+
+.rela.dyn       0x0000052c        0x0
+ .rela.text     0x0000052c        0x0 obj/muKernel-s.o
+
+.data           0x00000000        0x4 load address 0x0000052c
+ *(.data*)
+ .data          0x00000000        0x0 obj/muKernel-s.o
+ .data          0x00000000        0x0 obj/syscall.obj
+ .data          0x00000000        0x0 obj/muKernel.o
+ .data          0x00000000        0x0 obj/main.o
+ *(.sdata*)
+ .sdata         0x00000000        0x4 obj/main.o
+                0x00000000                count
+ *(.rodata*)
+
+.bss            0x00000004        0x0 load address 0x00000530
+ *(.bss*)
+ .bss           0x00000004        0x0 obj/muKernel-s.o
+ .bss           0x00000004        0x0 obj/syscall.obj
+ .bss           0x00000004        0x0 obj/muKernel.o
+ .bss           0x00000004        0x0 obj/main.o
+ *(.sbss*)
+                0x00000104                        . = (. + STACK_SIZE)
+                0x00000104                        . = ALIGN (0x4)
+                0x00000104                        _stack_ptr = .
+OUTPUT(build/main.elf elf32-littleriscv)
+
+.riscv.attributes
+                0x00000000       0x43
+ .riscv.attributes
+                0x00000000       0x33 obj/muKernel-s.o
+ .riscv.attributes
+                0x00000033       0x2f obj/syscall.obj
+ .riscv.attributes
+                0x00000062       0x3f obj/muKernel.o
+ .riscv.attributes
+                0x000000a1       0x3f obj/main.o
+
+.comment        0x00000000       0x1b
+ .comment       0x00000000       0x1b obj/muKernel.o
+                                 0x1c (size before relaxing)
+ .comment       0x0000001b       0x1c obj/main.o

@@ -2,6 +2,13 @@
 	
 #ECALL stubs
 
+
+.global Ext_Intr_Register_Callback
+Ext_Intr_Register_Callback:
+				li a7, ECALL_EXT_INTR_REG
+				ecall
+				ret
+
 .global BDPort_Setup
 BDPort_Setup:
 				li a7, ECALL_BDP_CFG

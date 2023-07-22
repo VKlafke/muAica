@@ -60,8 +60,8 @@ begin
 
 
  -- intr_sig <= '0', '1' after 1000 ns, '0' after 1050 ns;
-  port_io_sig(31 downto 28) <= "0000", "1000" after 900 ns, "0000" after 1200 ns;
-  port_io_sig(3 downto 0) <= "1111", "1010" after 8000 ns;
+  port_io_sig(31 downto 28) <= "0000", "1000" after 8000 ns;
+  port_io_sig(3 downto 0) <= "1111";
   port_io_sig(27 downto 4) <= (others => 'Z');
 -- port_io_sig(3 downto 0) <= x"1";
 

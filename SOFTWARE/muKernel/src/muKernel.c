@@ -1,9 +1,15 @@
+#include <stddef.h>
 #include "muKernel.h"
 #include "syscall.h"
 
+// Vector that hold the callbacks for external interrupts
+// these can be set by the user through Ext_Intr_Handler_Set(int, callback_t)
+static callback_t vec_Ext_Intr_Handler[MAX_EXT_INTR] = {NULL};
 
 
-int trap_handler(int mcause, int mepc, int a0, int a1, int a2, int a7) 
+// Main trap handler 
+// Deals with exceptions or calls ext intr dispatcher
+int trap_handler(int mcause, int mepc, int a0, int a1, int a2, int ecall_func) 
 {                                                                                                                
     if (mcause >= 0) 
 	{ // System calls and exceptions
@@ -65,30 +71,35 @@ int trap_handler(int mcause, int mepc, int a0, int a1, int a2, int a7)
 		}
 		else if(mcause == 8) // ECALL instruction
 		{
-			int ecall_func = a7;
 			int retVal = 0;
 			
-			// Request ecall func ID is stored in a7 
-			/*__asm__ volatile 
-			(
-				"mv %0, a7"
-				: "=r" (ecall_func)
-			);*/
+			// Do the system call 		
+			switch(ecall_func)
+			{				
+				case ECALL_EXT_INTR_REG: // Register ext intr handler 
+					Kernel_Ext_Intr_Handler_Set(a0, a1);
+				break;
+				
+				case ECALL_BDP_CFG:	// BDPort config
+					Kernel_BDPort_Setup(a0, a1, a2);
+				break;
+				
+				case ECALL_BDP_READ: // BDPort read
+					retVal = Kernel_BDPort_Read();
+				break;
+				
+				case ECALL_BDP_WRITE: // BDPort write 
+					Kernel_BDPort_Write(a0);
+				break;
+				
+				case ECALL_PIC_MASK: // Set PIC intr mask 
+					Kernel_PIC_Mask(a0);
+				break;
+				
+				default:
+				break;			
+			}
 			
-			// Do the system call 
-			
-			if(ecall_func == ECALL_BDP_CFG) // BDPort config
-			{		
-				Kernel_BDPort_Setup(a0, a1, a2);
-			}
-			else if(ecall_func == ECALL_BDP_READ) // BDPort read
-			{
-				retVal = Kernel_BDPort_Read();
-			}
-			else if(ecall_func == ECALL_BDP_WRITE) // BDPort write 
-			{
-				Kernel_BDPort_Write(a0);
-			}
 			
 			// Put retval in register a1 (a0 is return to mepc)			
 			__asm__ volatile
@@ -119,17 +130,25 @@ int trap_handler(int mcause, int mepc, int a0, int a1, int a2, int a7)
     else 
 	{    // IRQs from PIC  
 		
-		ext_intr_handler();
+		Kernel_Ext_Intr_Dispatcher();
 		
         return mepc;
     }        
                                                                                                       
 }
 
-void ext_intr_handler()
+
+/////////////////////////
+//
+// External interrupts 
+//
+
+// Dispatch interrupts to appropriate handler 
+void Kernel_Ext_Intr_Dispatcher()
 {
 	// Get IRQ number from PIC
 	int IRQ_ID = *(char*)PIC_IRQ_ID;
+	
 	
 	// SIMULATION DEBUG STRING IN REGISTERS
 	__asm__ volatile 
@@ -142,54 +161,56 @@ void ext_intr_handler()
 	 "li 	x30,'_'\n\t");
 	
 	// Treat IRQ based on ID	
-	if(IRQ_ID == 7)
+	if(IRQ_ID >= 0 && IRQ_ID < MAX_EXT_INTR)
 	{
-		__asm__ volatile 
-		("li	x31, '7'");
-	}
-	else if(IRQ_ID == 6)
-	{
-		__asm__ volatile 
-		("li	x31, '6'");
-	}
-	else if(IRQ_ID == 5)
-	{
-		__asm__ volatile 
-		("li	x31, '5'");
-	}
-	else if(IRQ_ID == 4)
-	{
-		__asm__ volatile 
-		("li	x31, '4'");
-	}
-	else if(IRQ_ID == 3)
-	{
-		__asm__ volatile 
-		("li	x31, '3'");
-	}
-	else if(IRQ_ID == 2)
-	{
-		__asm__ volatile 
-		("li	x31, '2'");
-	}
-	else if(IRQ_ID == 1)
-	{
-		__asm__ volatile 
-		("li	x31, '1'");
-	}
-	else if(IRQ_ID == 0)
-	{
-		__asm__ volatile 
-		("li	x31, '0'");
+		if(vec_Ext_Intr_Handler[IRQ_ID] != 0)
+			vec_Ext_Intr_Handler[IRQ_ID]();
+		else 
+			Kernel_Ext_Intr_default(); // default handler when there is no assigned callback 
 	}
 	
 	// Notify PIC that IRQ was treated
 	*(char*)PIC_ACK = IRQ_ID;
 }
 
+// Register external intr handler callbacks from user 
+void Kernel_Ext_Intr_Handler_Set(int n, callback_t handler_callback) 
+{
+	// Check for valid index 
+    if (n < 0 || n >= MAX_EXT_INTR) 
+		return;
+    
+	// Check for valid callback 
+    if (handler_callback == NULL) 
+		return;
+	
+	// Register callback 
+    vec_Ext_Intr_Handler[n] = handler_callback;
+}
+
+// Default external interrupt handler 
+void Kernel_Ext_Intr_default()
+{
+	__asm__ volatile 
+	("li	x24,''\n\t" \
+	 "li	x25,'I'\n\t" \
+	 "li 	x26,'N'\n\t" \
+	 "li	x27,'T'\n\t" \
+	 "li 	x28,'R'\n\t" \
+	 "li 	x29,'_'\n\t" \
+	 "li 	x30,'D'\n\t"
+	);		
+}
+
+							//
+							//
+							//
+//////////////////////////////
+
+
 //////////////////////////////
 //
-//	BDPort system functions
+//	BDPort
 //
 
 // Set up BD port registers
@@ -221,6 +242,23 @@ void Kernel_BDPort_Write(int val)
 	return;
 }
 	
+							//
+							//
+							//
+//////////////////////////////
+
+
+//////////////////////////////
+//
+//	PIC
+//
+
+// Set the PIC intr mask
+void Kernel_PIC_Mask(char val)
+{
+	*(char*)PIC_MASK = val;
+}
+
 							//
 							//
 							//

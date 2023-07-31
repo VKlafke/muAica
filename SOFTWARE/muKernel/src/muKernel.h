@@ -11,6 +11,8 @@
 #define PIC_ACK     0x80001010
 #define PIC_MASK    0x80001020
 
+#define UART_TX		0x80002000
+
 // Default values
 
 #define MAX_EXT_INTR 8
@@ -69,6 +71,23 @@ void Kernel_BDPort_Write();
 
 // Set the PIC intr mask
 void Kernel_PIC_Mask(char val);
+
+//
+//////////////////////////
+
+
+/////////////////////////
+//
+//  UART  
+//
+
+// Send string over TX 
+void Kernel_UART_TX(char* str);
+
+
+// Default TX callback
+// sends the next char of the string 
+void Kernel_TX_Callback();
 
 //
 //////////////////////////

@@ -34,3 +34,10 @@ PIC_Mask:
 				li a7, ECALL_PIC_MASK
 				ecall
 				ret
+				
+				
+.global UART_Print
+UART_Print:
+				li a7, ECALL_UART_TX
+				ecall
+				ret

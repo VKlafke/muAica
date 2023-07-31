@@ -1,0 +1,13 @@
+NET "clk" LOC = V10;
+NET "rst" LOC = C9;
+
+NET "port_io[0]" LOC = T10;
+NET "port_io[1]" LOC = T9;
+NET "port_io[2]" LOC = V9;
+NET "port_io[3]" LOC = M8;
+
+
+NET "port_io[28]" LOC = U16;
+NET "port_io[29]" LOC = V16;
+NET "port_io[30]" LOC = U15;
+NET "port_io[31]" LOC = V15;

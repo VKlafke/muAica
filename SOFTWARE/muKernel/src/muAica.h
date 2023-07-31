@@ -15,4 +15,8 @@ int  BDPort_Read();
 // ECALL - PIC_Mask
 void PIC_Mask(char val);
 
+// ECALL - UART Send
+// str MUST be null terminated;
+void UART_Print(char* str);
+
 #endif

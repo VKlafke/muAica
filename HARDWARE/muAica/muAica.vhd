@@ -9,7 +9,10 @@ entity muAica is
   (
     clk     : in    std_logic;    -- clock input
     rst_bt  : in    std_logic;    -- reset input (it's gonna pass through debounce logic)
-    port_io : inout std_logic_vector (n-1 downto 0) -- configurable IO port
+    port_io : inout std_logic_vector (n-1 downto 0); -- configurable IO port
+
+    tx      : out std_logic;
+	tx_active : out std_logic
   );
 end entity muAica;
 
@@ -68,14 +71,18 @@ architecture behavior of muAica is
 
   signal itrBus		: std_logic_vector(n-1 downto 0); -- Configurable interrupt signal bus from BDPort to PIC
 
+  signal irq_s    : std_logic_vector(7 downto 0); -- Used to concatenate internal interrupt signals with the itr bus
+
   signal  data_o_PIC    : std_logic_vector(7 downto 0);  -- PIC data out
   
   signal  ce_dm         : std_logic; -- Data memory enable
   signal  ce_bdP        : std_logic; -- Bidirectional port enable
   signal  ce_PIC        : std_logic; -- PIC enable
-
   
   signal  intr_p        : std_logic; -- PIC -> Core intr signal
+
+  signal  tx_done : std_logic; -- TX -> PIC
+  signal  tx_dv   : std_logic; -- Memory ctrl enable / we to tx
   
   
 begin
@@ -150,7 +157,8 @@ begin
 		wbe    		=> wbe,
 		ce_dm			=> ce_dm,
     ce_bdP    => ce_bdP,
-    ce_PIC    => ce_PIC
+    ce_PIC    => ce_PIC,
+    ce_TX     => tx_dv
 	);
   
 data_bus <=   data_o_bdP when ce_bdP = '1' else
@@ -187,23 +195,36 @@ data_bus <=   data_o_bdP when ce_bdP = '1' else
   data_i_bdP <= data_in when (ce_bdP = '1' AND we = '1') else
                 (others => 'Z');
 
-   	PIC: entity work.InterruptController
-		generic map (
-			IRQ_ID_ADDR		=> "00000000",
-			INT_ACK_ADDR	=> "00000001",
-			MASK_ADDR		  => "00000010"
-		)
-		port map (  
-			clk 	   => clk,
-			rst 	   => rst,			
-			data_in  => data_in(7 downto 0),
-			data_out => data_o_PIC,
-			address  => addr_prph,
-			rw		   => we,
-			ce		   => ce_PIC,
-			intr 	   => intr_p,
-			irq		   => itrBus(31 downto 24)
-		);             
+  PIC: entity work.InterruptController
+	generic map (
+		IRQ_ID_ADDR		=> "00000000",
+		INT_ACK_ADDR	=> "00000001",
+		MASK_ADDR		  => "00000010"
+	)
+	port map (  
+		clk 	   => clk,
+		rst 	   => rst,			
+		data_in  => data_in(7 downto 0),
+		data_out => data_o_PIC,
+		address  => addr_prph,
+		rw		   => we,
+		ce		   => ce_PIC,
+		intr 	   => intr_p,
+		irq		   => irq_s
+	);
+
+  irq_s <= itrBus(31 downto 25) & tx_done;
+  
+    
+  UART_TX: entity work.UART_TX_v1
+  port map(
+    i_Clk       => clk,
+    i_TX_DV     => tx_dv,
+    i_TX_Byte   => data_in(7 downto 0),
+    o_TX_Active => tx_active,
+    o_TX_Serial => tx,
+    o_TX_Done   => tx_done
+  );
 
 ------------------------------------------------------
 -- Memories

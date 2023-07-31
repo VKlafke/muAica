@@ -2,9 +2,12 @@
 #include "muKernel.h"
 #include "syscall.h"
 
+volatile char* tempStr;
+volatile int strCnt;
+
 // Vector that hold the callbacks for external interrupts
 // these can be set by the user through Ext_Intr_Handler_Set(int, callback_t)
-static callback_t vec_Ext_Intr_Handler[MAX_EXT_INTR] = {NULL};
+static callback_t vec_Ext_Intr_Handler[MAX_EXT_INTR] = {Kernel_TX_Callback};
 
 
 // Main trap handler 
@@ -94,6 +97,10 @@ int trap_handler(int mcause, int mepc, int a0, int a1, int a2, int ecall_func)
 				
 				case ECALL_PIC_MASK: // Set PIC intr mask 
 					Kernel_PIC_Mask(a0);
+				break;
+				
+				case ECALL_UART_TX: // Send string to tx 
+					Kernel_UART_TX(a0);
 				break;
 				
 				default:
@@ -257,6 +264,38 @@ void Kernel_BDPort_Write(int val)
 void Kernel_PIC_Mask(char val)
 {
 	*(char*)PIC_MASK = val;
+}
+
+							//
+							//
+							//
+//////////////////////////////
+
+
+
+//////////////////////////////
+//
+//	UART
+//
+
+// Send string over TX 
+// TODO: Add return indicating if TX msg was sent successfuly
+//		 false if TX busy
+void Kernel_UART_TX(char* str)
+{
+	*(char*)UART_TX = str[0];
+	
+	tempStr = str;
+	strCnt = 1;
+	
+}
+
+// Default TX callback
+// sends the next char of the string 
+void Kernel_TX_Callback()
+{
+	if(tempStr[strCnt] != '\0')
+		*(char*)UART_TX = tempStr[strCnt++];
 }
 
 							//

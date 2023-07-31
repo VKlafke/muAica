@@ -4,19 +4,8 @@
 
 volatile int count = 0x666;
 
-void test()
-{
-				// DEBUG STRING, SIMULATION ONLY
-	__asm__ volatile 
-	("li	x24,'C'\n\t" \
-	 "li	x25,'B'\n\t" \
-	 "li 	x26,'T'\n\t" \
-	 "li	x27,'E'\n\t" \
-	 "li 	x28,'S'\n\t" \
-	 "li 	x29,'T'\n\t" \
-	 "li 	x30,'_'\n\t" \
-	 "li 	x31,'1'\n\t");
-}
+extern volatile char* tempStr;
+extern volatile int strCnt;
 
 int main()
 {	
@@ -29,7 +18,7 @@ int main()
 	//	  INTR: 0xF0000000, last 4 bits are connected to PIC  	//
 	//////////////////////////////////////////////////////////////
 	
-	int BDP_Cfg  = 0xF000000F;
+	int BDP_Cfg  = 0x0000000F;
 	int BDP_En   = 0xFFFFFFFF;
 	int BDP_Intr = 0xF0000000;
 	
@@ -42,12 +31,14 @@ int main()
 	//			           //
 	/////////////////////////
 	
-	PIC_Mask(0xF0); // Enable the last bits as interrupts (1111 0000)
+	PIC_Mask(0xF1); // Enable (1111 0001) as interrupts 
 	
-	// Register test func as intr 7 callback 
-	Ext_Intr_Register_Callback(7, test);
+	// Register tx callback 
+	//Ext_Intr_Register_Callback(0, callback_tx_proc);
 	
 	int a = 10;
+	
+	UART_Print("teste\n");
 
 	do
 	{
@@ -57,7 +48,7 @@ int main()
 		
 		//count = a * count;
 		
-		BDPort_Write(b_c << 8);
+		BDPort_Write(b_c << 28);
 		
 		a += 0x12;
 		

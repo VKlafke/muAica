@@ -12,7 +12,7 @@ entity muAica is
     port_io : inout std_logic_vector (n-1 downto 0); -- configurable IO port
 
     tx      : out std_logic;
-	tx_active : out std_logic
+    rx  	: in std_logic
   );
 end entity muAica;
 
@@ -81,9 +81,14 @@ architecture behavior of muAica is
   
   signal  intr_p        : std_logic; -- PIC -> Core intr signal
 
-  signal  tx_done : std_logic; -- TX -> PIC
-  signal  tx_dv   : std_logic; -- Memory ctrl enable / we to tx
-  
+  signal  tx_done       : std_logic; -- TX -> PIC
+  signal  tx_dv         : std_logic; -- Memory ctrl enable / we to tx
+  signal  rd_TX         : std_logic; -- read from TX, this returns the value of O_TX_DONE sig
+  signal  tx_active_s	: std_logic;
+
+  signal  rx_dv         : std_logic; -- RX -> PIC
+  signal  data_o_RX     : std_logic_vector(7 downto 0);  -- RX data out
+  signal  rd_RX         : std_logic; -- read from RX, controls the memory ctrl buffer
   
 begin
 
@@ -158,12 +163,16 @@ begin
 		ce_dm			=> ce_dm,
     ce_bdP    => ce_bdP,
     ce_PIC    => ce_PIC,
-    ce_TX     => tx_dv
+    wr_TX     => tx_dv,
+    rd_TX     => rd_TX,
+    ce_RX     => rd_RX
 	);
   
-data_bus <=   data_o_bdP when ce_bdP = '1' else
-              x"000000" & data_o_PIC when ce_PIC = '1' else
-              data_o_dm;
+data_bus <=  x"000000" & data_o_RX       when rd_RX  = '1' else 
+                        data_o_bdP       when ce_bdP = '1' else
+            x"000000" & data_o_PIC       when ce_PIC = '1' else
+            x"0000000" & "000" & tx_active_s when rd_TX  = '1' else  
+                        data_o_dm;
 
 ------------------------------------------------------
 -- Peripherals
@@ -213,7 +222,7 @@ data_bus <=   data_o_bdP when ce_bdP = '1' else
 		irq		   => irq_s
 	);
 
-  irq_s <= itrBus(31 downto 25) & tx_done;
+  irq_s <= itrBus(31 downto 25) & rx_dv;
   
     
   UART_TX: entity work.UART_TX_v1
@@ -221,9 +230,19 @@ data_bus <=   data_o_bdP when ce_bdP = '1' else
     i_Clk       => clk,
     i_TX_DV     => tx_dv,
     i_TX_Byte   => data_in(7 downto 0),
-    o_TX_Active => tx_active,
+    o_TX_Active => tx_active_s,
     o_TX_Serial => tx,
     o_TX_Done   => tx_done
+  );
+
+	--tx_active <= tx_active_s;
+
+  UART_RX: entity work.UART_RX_v1
+  port map(
+    i_Clk       => clk,
+    i_RX_Serial => rx,
+    o_RX_DV     => rx_dv,
+    o_RX_Byte   => data_o_rx
   );
 
 ------------------------------------------------------

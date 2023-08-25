@@ -9,7 +9,9 @@ entity muAica_tl is
 		port_io : inout std_logic_vector(31 downto 0);
 		
 		tx		: out std_logic;
-		tx_active : out std_logic
+		tx_active : out std_logic;
+		
+		rx		: in std_logic
 	);
 end muAica_tl;
 
@@ -36,7 +38,8 @@ begin
             rst_bt      => rst, 
             port_io 	=> port_io_sig,
 			tx		=> tx_s,
-			tx_active => tx_a
+			tx_active => tx_a,
+			rx		=> rx
         );  
 		
 	port_io <= port_io_sig;

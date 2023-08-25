@@ -7,7 +7,7 @@ volatile int strCnt;
 
 // Vector that hold the callbacks for external interrupts
 // these can be set by the user through Ext_Intr_Handler_Set(int, callback_t)
-static callback_t vec_Ext_Intr_Handler[MAX_EXT_INTR] = {Kernel_TX_Callback};
+static callback_t vec_Ext_Intr_Handler[MAX_EXT_INTR] = {Kernel_RX_Callback};
 
 
 // Main trap handler 
@@ -80,7 +80,7 @@ int trap_handler(int mcause, int mepc, int a0, int a1, int a2, int ecall_func)
 			switch(ecall_func)
 			{				
 				case ECALL_EXT_INTR_REG: // Register ext intr handler 
-					Kernel_Ext_Intr_Handler_Set(a0, a1);
+					Kernel_Ext_Intr_Handler_Set(a0, (callback_t)a1);
 				break;
 				
 				case ECALL_BDP_CFG:	// BDPort config
@@ -100,7 +100,7 @@ int trap_handler(int mcause, int mepc, int a0, int a1, int a2, int ecall_func)
 				break;
 				
 				case ECALL_UART_TX: // Send string to tx 
-					Kernel_UART_TX(a0);
+					Kernel_UART_TX((char*)a0);
 				break;
 				
 				default:
@@ -137,7 +137,30 @@ int trap_handler(int mcause, int mepc, int a0, int a1, int a2, int ecall_func)
     else 
 	{    // IRQs from PIC  
 		
+		int _val_ = 0x00000800;
+		int _mstatus_ = 128;
+		
+		// Enable exceptions, disable int
+		__asm__ volatile
+		(
+			"csrc mie, %0\n\t"\
+			"csrw	mstatus, 8"
+			:
+			: "r"(_val_)
+		);
+			
+		// Call appropriate intr handler 
 		Kernel_Ext_Intr_Dispatcher();
+	
+		// Restore mstatus and mie 
+		__asm__ volatile
+		(
+			"csrw	mstatus, %0\n\t"	 \
+			"csrs 	mie, %1" 
+			:
+			: "r"(_mstatus_), "r"(_val_)
+		);
+			
 		
         return mepc;
     }        
@@ -154,7 +177,7 @@ int trap_handler(int mcause, int mepc, int a0, int a1, int a2, int ecall_func)
 void Kernel_Ext_Intr_Dispatcher()
 {
 	// Get IRQ number from PIC
-	int IRQ_ID = *(char*)PIC_IRQ_ID;
+	int IRQ_ID = PIC_IRQ_ID;
 	
 	
 	// SIMULATION DEBUG STRING IN REGISTERS
@@ -177,22 +200,24 @@ void Kernel_Ext_Intr_Dispatcher()
 	}
 	
 	// Notify PIC that IRQ was treated
-	*(char*)PIC_ACK = IRQ_ID;
+	PIC_ACK = IRQ_ID;
 }
 
 // Register external intr handler callbacks from user 
-void Kernel_Ext_Intr_Handler_Set(int n, callback_t handler_callback) 
+int Kernel_Ext_Intr_Handler_Set(int n, callback_t handler_callback) 
 {
 	// Check for valid index 
     if (n < 0 || n >= MAX_EXT_INTR) 
-		return;
+		return 1; // N_OUT_OF_BOUNDS
     
 	// Check for valid callback 
     if (handler_callback == NULL) 
-		return;
+		return 2; // INVALID_CALLBACK
 	
 	// Register callback 
     vec_Ext_Intr_Handler[n] = handler_callback;
+	
+	return 0;
 }
 
 // Default external interrupt handler 
@@ -226,17 +251,15 @@ void Kernel_Ext_Intr_default()
 // 	 Intr: Bit is interruption (only bits 31 - 24)
 void Kernel_BDPort_Setup(int config, int enable, int intr)
 {
-	*(int*)BDPORT_CFG = config;
-	*(int*)BDPORT_EN = enable;
-	*(int*)BDPORT_INTR = intr;
-	
-	return;
+	BDPORT_CFG = config;
+	BDPORT_EN = enable;
+	BDPORT_INTR = intr;
 }
 
 // Read int value from BDPort
 int Kernel_BDPort_Read()
 {
-	int ret = *(int*)BDPORT_DATA;
+	int ret = BDPORT_DATA;
 	
 	return ret;
 }
@@ -244,9 +267,7 @@ int Kernel_BDPort_Read()
 // Write to BDPort 
 void Kernel_BDPort_Write(int val)
 {
-	*(int*)BDPORT_DATA = val;
-	
-	return;
+	BDPORT_DATA = val;
 }
 	
 							//
@@ -263,7 +284,7 @@ void Kernel_BDPort_Write(int val)
 // Set the PIC intr mask
 void Kernel_PIC_Mask(char val)
 {
-	*(char*)PIC_MASK = val;
+	PIC_MASK = val;
 }
 
 							//
@@ -283,19 +304,37 @@ void Kernel_PIC_Mask(char val)
 //		 false if TX busy
 void Kernel_UART_TX(char* str)
 {
-	*(char*)UART_TX = str[0];
+	strCnt = 0;
 	
-	tempStr = str;
-	strCnt = 1;
-	
+	while(str[strCnt] != '\0')
+	{
+		while(UART_TX == 1);
+			//continue;
+		
+		UART_TX = str[strCnt++];
+	}	
 }
 
-// Default TX callback
-// sends the next char of the string 
-void Kernel_TX_Callback()
+volatile char rxStr[256];
+volatile int rxCnt = 0;
+
+// Default RX callback
+// stores the string in an array
+// sends string over tx when '\0' arrives
+void Kernel_RX_Callback()
 {
-	if(tempStr[strCnt] != '\0')
-		*(char*)UART_TX = tempStr[strCnt++];
+	char rx_in = UART_RX;
+
+	rxStr[rxCnt] = rx_in;
+
+	if(rx_in == '\0')
+	{
+		Kernel_UART_TX((char*)rxStr);
+
+		rxCnt = 0;
+	}
+	else
+		rxCnt++;
 }
 
 							//

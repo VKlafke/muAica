@@ -28,7 +28,7 @@ _bootloader_csr_:
 # Save registers to stack, align trap_handler arguments
 # set return value from ecall, restore registers.
 trap_entry:
-    addi sp, sp, -30 * 4
+    addi sp, sp, -31 * 4
   
     sw ra,  0 * 4(sp)	# x1, Return Address
 	sw gp,  1 * 4(sp)	# x3, Global pointer
@@ -42,7 +42,7 @@ trap_entry:
 	
 	sw s1,  7 * 4(sp)	# x9, Saved register
 	
-    #sw a0,  8 * 4(sp)   # x10 - Function return value, no need to save.
+    sw a0,  8 * 4(sp)   # x10 - Function return value, need to save when handling INTR
 	sw a1,  9 * 4(sp)	# x11, Function arguments / return val (a0 - a1)
 	
     sw a2,  10 * 4(sp)	# x12
@@ -77,6 +77,9 @@ trap_entry:
 	
     csrr a0, mcause # arg 0: cause
     csrr a1, mepc   # arg 1: epc
+	
+	sw	a0, 30 * 4(sp)	# save mcause
+	
     jal trap_handler
     
     # return value is the PC to resume
@@ -95,7 +98,14 @@ trap_entry:
     lw t2,  5 * 4(sp)
 	lw fp,  6 * 4(sp)
 	lw s1,  7 * 4(sp)
-    #lw a0,  8 * 4(sp) 
+	
+	lw a1, 30 * 4(sp) # load mcause 	
+	bge a1, x0, lbl_skip_a0
+	
+    lw a0,  8 * 4(sp) # mcause < 0 means intr, restore a0
+	
+lbl_skip_a0: # if mcause is >= 0, don't restore saved a0
+		
 	lw a1,  9 * 4(sp)
     lw a2,  10 * 4(sp)
     lw a3,  11 * 4(sp)
@@ -118,6 +128,6 @@ trap_entry:
     lw t5,  28 * 4(sp)
     lw t6,  29 * 4(sp)
 
-    addi sp, sp, 30 * 4
+    addi sp, sp, 31 * 4
 
     mret

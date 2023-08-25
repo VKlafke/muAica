@@ -16,6 +16,7 @@ package map_pkg is
   constant  BDPort_Addr  : std_logic_vector(7 downto 0) := x"00";
   constant  PIC_Addr     : std_logic_vector(7 downto 0) := x"01";
   constant  TX_Addr      : std_logic_vector(7 downto 0) := x"02";
+  constant  RX_Addr      : std_logic_vector(7 downto 0) := x"03";
   --constant  IO_end    	: std_logic_vector(31 downto 0) := x"FFFF_FFFF";
 
   -- 16lsb of io devices

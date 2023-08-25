@@ -7,20 +7,61 @@ volatile int count = 0x666;
 extern volatile char* tempStr;
 extern volatile int strCnt;
 
+void callback_test()
+{
+	 int i = 0;
+	 // "Debounce"
+	 while(i < 200000)
+		 i++;
+	 
+	UART_Print("Ecall dentro de intr\n");
+	
+	// DEBUG STRING, SIMULATION ONLY
+	__asm__ volatile 
+	("li	x24,'I'\n\t" \
+	 "li	x25,'N'\n\t" \
+	 "li 	x26,'T'\n\t" \
+	 "li	x27, 'R'\n\t" \
+	 "li 	x28,'_'\n\t" \
+	 "li 	x29,'_'\n\t" \
+	 "li 	x30,'_'\n\t" \
+	 "li 	x31,'7'\n\t");
+	 
+	 
+	int b = BDPort_Read();
+		
+	char b_c = b & 0xf;
+	char testVal[2]; 
+	
+	testVal[0] = b_c + 0x30;
+	testVal[1] = '\0';
+	
+	UART_Print("Valor lido: ");
+	UART_Print(testVal);
+	UART_Print("\n");
+		
+	//count = a * count;
+		
+	BDPort_Write(b_c << 27);
+		
+}
+
 int main()
 {	
+	UART_Print("INICIOU\n");
+
 	//////////////////////////////////////////////////////////////
 	//  								  						//
 	//  Configure the bidirectional port  						//
 	//															//
-	//	Config: 0xF000000F, last and first 4 bits are input		//
+	//	Config: 0x8000000F, last and first 4 bits are input		//
 	//  Enable: 0xFFFFFFFF										//
 	//	  INTR: 0xF0000000, last 4 bits are connected to PIC  	//
 	//////////////////////////////////////////////////////////////
 	
-	int BDP_Cfg  = 0x0000000F;
+	int BDP_Cfg  = 0x8000000F;
 	int BDP_En   = 0xFFFFFFFF;
-	int BDP_Intr = 0xF0000000;
+	int BDP_Intr = 0x80000000;
 	
 	BDPort_Setup(BDP_Cfg, BDP_En, BDP_Intr);
 	
@@ -31,26 +72,25 @@ int main()
 	//			           //
 	/////////////////////////
 	
-	PIC_Mask(0xF1); // Enable (1111 0001) as interrupts 
+	
+	PIC_Mask(0xF2); // Enable (1111 0011) as interrupts 
 	
 	// Register tx callback 
-	//Ext_Intr_Register_Callback(0, callback_tx_proc);
+	int ret = Ext_Intr_Register_Callback(7, callback_test);
+	
+	if(ret == N_OUT_OF_BOUNDS)
+		UART_Print("Ext_Intr_Register_Callback Fail: N_OUT_OF_BOUNDS\n");
+	else if(ret == INVALID_CALLBACK)
+		UART_Print("Ext_Intr_Register_Callback Fail: INVALID_CALLBACK\n");
+	else
+		UART_Print("Callback registered!\n");
 	
 	int a = 10;
-	
-	UART_Print("teste\n");
 
+	
 	do
 	{
-		int b = BDPort_Read();
-		
-		char b_c = b & 0xf;
-		
-		//count = a * count;
-		
-		BDPort_Write(b_c << 28);
-		
-		a += 0x12;
+		a++;
 		
 	} while(1);
 		

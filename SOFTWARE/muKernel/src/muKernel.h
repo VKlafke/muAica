@@ -2,16 +2,17 @@
 #define _MUKERNEL_H_
 
 // Peripherals addresses
-#define BDPORT_EN 	0x80000000
-#define BDPORT_CFG 	0x80000010
-#define BDPORT_DATA 0x80000020
-#define BDPORT_INTR 0x80000030
+#define BDPORT_EN 	(*((volatile int*) 0x80000000))
+#define BDPORT_CFG 	(*((volatile int*) 0x80000010))
+#define BDPORT_DATA (*((volatile int*) 0x80000020))
+#define BDPORT_INTR (*((volatile int*) 0x80000030))
 
-#define PIC_IRQ_ID  0x80001000
-#define PIC_ACK     0x80001010
-#define PIC_MASK    0x80001020
+#define PIC_IRQ_ID  (*((volatile char*) 0x80001000))
+#define PIC_ACK     (*((volatile char*) 0x80001010))
+#define PIC_MASK    (*((volatile char*) 0x80001020))
 
-#define UART_TX		0x80002000
+#define UART_TX		(*((volatile char*) 0x80002000))
+#define UART_RX		(*((volatile char*) 0x80003000))
 
 // Default values
 
@@ -38,7 +39,7 @@ int trap_handler(int mcause, int mepc, int a0, int a1, int a2, int ecall_func);
 void Kernel_Ext_Intr_Dispatcher();
 
 // Register external intr handler callbacks from user 
-void Kernel_Ext_Intr_Handler_Set(int n, callback_t handler_callback);
+int Kernel_Ext_Intr_Handler_Set(int n, callback_t handler_callback);
 
 // Default callback for external intr 
 void Kernel_Ext_Intr_default();
@@ -84,10 +85,8 @@ void Kernel_PIC_Mask(char val);
 // Send string over TX 
 void Kernel_UART_TX(char* str);
 
-
-// Default TX callback
-// sends the next char of the string 
-void Kernel_TX_Callback();
+// Default RX callback
+void Kernel_RX_Callback();
 
 //
 //////////////////////////

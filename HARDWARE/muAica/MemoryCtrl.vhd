@@ -38,7 +38,9 @@ entity MemoryCtrl is
     ce_dm	     : out std_logic;
 	ce_bdP	     : out std_logic;
 	ce_PIC		 : out std_logic;
-	ce_TX		 : out std_logic
+	wr_TX		 : out std_logic;
+	rd_TX		 : out std_logic;
+	ce_RX		 : out std_logic
   );
 end entity MemoryCtrl;
 
@@ -201,10 +203,17 @@ begin
 	ce_PIC <= '1' when (currentState = st_Prph_Exec AND addr_p = PIC_Addr) else 
 			  '0';
 
-	-- TX enable
-	ce_TX <= '1' when (currentState = st_Prph_Exec AND addr_p = TX_Addr) else 
+	-- TX enable write
+	wr_TX <= '1' when (currentState = st_Prph_Exec AND addr_p = TX_Addr AND we = '1') else 
 			 '0';
 
+	-- TX enable read
+	rd_TX <= '1' when (currentState = st_Prph_Exec AND addr_p = TX_Addr AND we = '0') else 
+			 '0';
+
+	-- RX enable
+	ce_RX <= '1' when (currentState = st_Prph_Exec AND addr_p = RX_Addr) else 
+					  '0';
 	
 
 	--wait_d <= '0';

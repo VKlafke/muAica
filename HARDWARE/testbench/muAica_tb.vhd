@@ -14,7 +14,8 @@ architecture behavior of muAica_tb is
       clk       : in    std_logic;
       rst_bt    : in    std_logic;
       port_io   : inout std_logic_vector (n-1 downto 0); -- configurable IO port
-      tx        : out std_logic
+      tx        : out std_logic;
+	  rx		: in std_logic
     );
   end COMPONENT muAica;
 
@@ -28,6 +29,7 @@ architecture behavior of muAica_tb is
   signal  port_io_sig  : std_logic_vector (n-1 downto 0); -- interface with microcontroller port
 
   signal tx_s : std_logic; -- tx signal
+  signal rx_s : std_logic;
 
 begin
 
@@ -59,13 +61,16 @@ begin
     clk     => clk,
     rst_bt  => rst_bt,
     port_io => port_io_sig,
-    tx      => tx_s
+    tx      => tx_s,
+	rx		=> rx_s
   );
+  
+  rx_s <= '0';
 
  -- intr_sig <= '0', '1' after 1000 ns, '0' after 1050 ns;
-  port_io_sig(31 downto 28) <= "0000", "1000" after 8000 ns;
+ -- port_io_sig(30 downto 27) <= "0000", "1000" after 8000 ns;
   port_io_sig(3 downto 0) <= "1111";
-  port_io_sig(27 downto 4) <= (others => 'Z');
--- port_io_sig(3 downto 0) <= x"1";
+  port_io_sig(30 downto 4) <= (others => 'Z');
+  port_io_sig(31) <= '0', '1' after 15000 ns, '0' after 16000 ns;
 
 end architecture behavior;

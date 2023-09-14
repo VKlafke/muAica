@@ -18,14 +18,14 @@ end entity muAica;
 
 architecture behavior of muAica is
 
-  COMPONENT bt_debounce is
+  COMPONENT ResetSynchronizer is
     port
     (
       clk   : in  std_logic;
-      bt_in : in  std_logic;
-      bt_out: out std_logic
+      rst_in : in  std_logic;
+      rst_out: out std_logic
     );
-  end COMPONENT bt_debounce;
+  end COMPONENT ResetSynchronizer;
 
   -- System reset
   signal  rst_int : std_logic := '1';
@@ -90,6 +90,9 @@ architecture behavior of muAica is
   signal  data_o_RX     : std_logic_vector(7 downto 0);  -- RX data out
   signal  rd_RX         : std_logic; -- read from RX, controls the memory ctrl buffer
   
+  signal ce_Timer   : std_logic; -- Timer write enable
+  signal timer_intr : std_logic; -- Timer -> PIC
+
 begin
 
   ------------------------------------------------
@@ -165,7 +168,8 @@ begin
     ce_PIC    => ce_PIC,
     wr_TX     => tx_dv,
     rd_TX     => rd_TX,
-    ce_RX     => rd_RX
+    ce_RX     => rd_RX,
+    ce_Timer  => ce_Timer
 	);
   
 data_bus <=  x"000000" & data_o_RX       when rd_RX  = '1' else 
@@ -222,7 +226,7 @@ data_bus <=  x"000000" & data_o_RX       when rd_RX  = '1' else
 		irq		   => irq_s
 	);
 
-  irq_s <= itrBus(31 downto 25) & rx_dv;
+  irq_s <= itrBus(31 downto 26) & '0' & timer_intr;
   
     
   UART_TX: entity work.UART_TX_v1
@@ -245,12 +249,28 @@ data_bus <=  x"000000" & data_o_RX       when rd_RX  = '1' else
     o_RX_Byte   => data_o_rx
   );
 
+  
+  TIMER_0: entity work.TimerInterrupt
+	generic map (
+		BASE_CLOCK_ADDR	 => "00000000",
+		TIMER_VAL_ADDR	 => "00000001",
+		ENABLE_ADDR		   => "00000010"
+	)
+	port map (  
+		clk 	   => clk,
+		rst 	   => rst,		
+    data_in  => data_in,
+    address  => addr_prph,
+    ce       => ce_Timer,
+    intr     => timer_intr
+  );
+
 ------------------------------------------------------
 -- Memories
 --
   INSTRUCTION_MEMORY: entity work.Memory(behavioral)
 	generic map (
-		SIZE            => 4096,                                  -- Memory depth 
+		SIZE            => 5120,                                  -- Memory depth 
 		ADDR_WIDTH		  => 32,
 		COL_WIDTH		    => 8,
 		NB_COL		    	=> 4,
@@ -287,12 +307,13 @@ DATA_MEMORY: entity work.Memory(behavioral)
 
   ---------------------------------------------
   ----- RESET BUTTON DEBOUNCE
-  rst_bt_debounce_i:  bt_debounce
+  rst_bt_debounce_i:  ResetSynchronizer
   port map
   (
     clk     => clk,
-    bt_in   => rst_bt,
-    bt_out  => rst_db
+    rst_in   => rst_bt,
+    rst_out  => rst_db
   );
+
 
 end architecture behavior;

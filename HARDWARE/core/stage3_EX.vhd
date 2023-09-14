@@ -246,7 +246,7 @@ begin
         exmem.ecall_excp    <= ecall_excp_s;
         -- others
         exmem.data_reg      <= M_excp;
-        exmem.pc            <= idex.pc;
+        exmem.pc            <= idex.pc_csr; -- changed to saved pc
         exmem.alu_result    <= ex_alu_out;
         exmem.alu_zero      <= ex_alu_zero;
         exmem.funct3        <= idex.funct3;

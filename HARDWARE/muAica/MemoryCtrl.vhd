@@ -40,7 +40,8 @@ entity MemoryCtrl is
 	ce_PIC		 : out std_logic;
 	wr_TX		 : out std_logic;
 	rd_TX		 : out std_logic;
-	ce_RX		 : out std_logic
+	ce_RX		 : out std_logic;
+	ce_Timer	 : out std_logic
   );
 end entity MemoryCtrl;
 
@@ -214,6 +215,10 @@ begin
 	-- RX enable
 	ce_RX <= '1' when (currentState = st_Prph_Exec AND addr_p = RX_Addr) else 
 					  '0';
+					
+	-- RX enable
+	ce_Timer <= '1' when (currentState = st_Prph_Exec AND addr_p = Timer_Addr AND we = '1') else 
+										'0';
 	
 
 	--wait_d <= '0';

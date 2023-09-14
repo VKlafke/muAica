@@ -1,8 +1,8 @@
-STACK_SIZE = 0x100;         /* Stack size in bytes */
+STACK_SIZE = 0x300;         /* Stack size in bytes */
 
 MEMORY
 {
-  INSTRUCTION_MEMORY : ORIGIN = 0x00000000, LENGTH = 4K
+  INSTRUCTION_MEMORY : ORIGIN = 0x00000000, LENGTH = 5K
   DATA_MEMORY        : ORIGIN = 0x00000000, LENGTH = 4K
 }
 

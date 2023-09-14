@@ -1,6 +1,23 @@
 #ifndef _MUKERNEL_H_
 #define _MUKERNEL_H_
 
+// Trap causes 
+enum Kernel_Trap_Codes
+{
+	EX_MISALIGNED_INSTRUCTION_ADDR = 1,
+	EX_ILLEGAL_INSTRUCTION, 
+    EX_MISALIGNED_DATA_ADDR = 4,
+    EX_ECALL = 8,
+};
+
+// External callback reg issue codes
+enum Ext_Intr_Reg_Error_Codes
+{
+	N_OUT_OF_BOUNDS = 1,
+	INVALID_CALLBACK,
+};
+
+
 // Peripherals addresses
 #define BDPORT_EN 	(*((volatile int*) 0x80000000))
 #define BDPORT_CFG 	(*((volatile int*) 0x80000010))
@@ -14,6 +31,10 @@
 #define UART_TX		(*((volatile char*) 0x80002000))
 #define UART_RX		(*((volatile char*) 0x80003000))
 
+#define TIMER_BASE_CLK (*((volatile int*) 0x80004000))
+#define TIMER_COUNT    (*((volatile int*) 0x80004010))
+#define TIMER_ENABLE   (*((volatile char*) 0x80004020))	
+
 // Default values
 
 #define MAX_EXT_INTR 8
@@ -25,7 +46,7 @@ typedef void (*callback_t)();
 
 // Handles the treatment of exceptions / interrupts.
 // Gets trap ID from mcause and calls the appropriate handler for it
-int trap_handler(int mcause, int mepc, int a0, int a1, int a2, int ecall_func);
+int TrapHandler(int mcause, int mepc, int ecallFunc, int a0, int a1, int a2);
 
 
 ///////////////////////
@@ -36,13 +57,13 @@ int trap_handler(int mcause, int mepc, int a0, int a1, int a2, int ecall_func);
 // Dispatches external interrupts to the appropriate handler 
 // Reads IRQ from PIC then calls the configured callback,
 // if callback not set, defaults to Kernel_Ext_Intr_default() 
-void Kernel_Ext_Intr_Dispatcher();
+void KernelExtIntrDispatcher();
 
 // Register external intr handler callbacks from user 
-int Kernel_Ext_Intr_Handler_Set(int n, callback_t handler_callback);
+int KernelExtIntrHandlerSet(int n, callback_t handler_callback);
 
 // Default callback for external intr 
-void Kernel_Ext_Intr_default();
+void KernelExtIntrDefault(int irqID);
 
 //
 /////////////////////////
@@ -54,13 +75,13 @@ void Kernel_Ext_Intr_default();
 //
 
 // Setup BDPort values 
-void Kernel_BDPort_Setup(int config, int enable, int intr);
+void KernelBDPortSetup(int config, int enable, int intr);
 
 // Read from BDPort
-int Kernel_BDPort_Read();
+int KernelBDPortRead();
 
 // Write to BDPort
-void Kernel_BDPort_Write();
+void KernelBDPortWrite();
 
 //
 //////////////////////////
@@ -71,7 +92,7 @@ void Kernel_BDPort_Write();
 //
 
 // Set the PIC intr mask
-void Kernel_PIC_Mask(char val);
+void KernelPICMask(char val);
 
 //
 //////////////////////////
@@ -83,10 +104,28 @@ void Kernel_PIC_Mask(char val);
 //
 
 // Send string over TX 
-void Kernel_UART_TX(char* str);
+void KernelUARTTX(char* str);
 
 // Default RX callback
-void Kernel_RX_Callback();
+void KernelRXCallback();
+
+//
+//////////////////////////
+
+
+/////////////////////////
+//
+//  TIMER 
+//
+
+// Set the base clock used for timer calculations
+void KernelTimerSetClock(int clk);
+
+// Set the timer count target value, in ms
+void KernelTimerSetCount(int cnt);
+
+// Enable / disable the timer 
+void KernelTimerSetEnabled(int enable);
 
 //
 //////////////////////////

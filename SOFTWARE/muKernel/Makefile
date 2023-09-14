@@ -60,7 +60,7 @@ LFLAGS = -T link.ld
 	@echo    
 	@echo Generating instruction memory image...
 	$(OBJCOPY_RISCV) --dump-section .text=./build/code.bin ./build/$(addsuffix .elf, $(MAIN_SRC))
-	../bin2hex ./build/code.bin > ./out/code.txt 4096
+	../bin2hex ./build/code.bin > ./out/code.txt 4999
     
 	@echo
 	@echo Generating data memory image...

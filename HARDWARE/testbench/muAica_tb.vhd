@@ -15,7 +15,7 @@ architecture behavior of muAica_tb is
       rst_bt    : in    std_logic;
       port_io   : inout std_logic_vector (n-1 downto 0); -- configurable IO port
       tx        : out std_logic;
-	  rx		: in std_logic
+	    rx: in std_logic
     );
   end COMPONENT muAica;
 
@@ -48,10 +48,10 @@ begin
   begin
     rst_bt <= '0'; wait for 100 ns;
     loop
+      rst_bt <= '1'; wait for 50 ns;
+      rst_bt <= '0'; wait for 20 sec;
       rst_bt <= '1'; wait for 100 ns;
       rst_bt <= '0'; wait for 10 sec;
-      rst_bt <= '1'; wait for 100 ns;
-      rst_bt <= '0'; wait for 2 sec;
     end loop;
   end process rst_button;
 
@@ -69,8 +69,8 @@ begin
 
  -- intr_sig <= '0', '1' after 1000 ns, '0' after 1050 ns;
  -- port_io_sig(30 downto 27) <= "0000", "1000" after 8000 ns;
-  port_io_sig(3 downto 0) <= "1111";
-  port_io_sig(30 downto 4) <= (others => 'Z');
-  port_io_sig(31) <= '0', '1' after 15000 ns, '0' after 16000 ns;
+  --port_io_sig(3 downto 0) <= "1111";
+  port_io_sig(30 downto 0) <= (others => 'Z');
+  port_io_sig(31) <= '0'; --, '1' after 15000 ns, '0' after 16000 ns;
 
 end architecture behavior;

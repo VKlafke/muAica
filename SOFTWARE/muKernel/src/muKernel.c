@@ -6,18 +6,28 @@ volatile char* tempStr;
 volatile int strCnt;
 
 // Vector that hold the callbacks for external interrupts
-// these can be set by the user through Ext_Intr_Handler_Set(int, callback_t)
-static callback_t vec_Ext_Intr_Handler[MAX_EXT_INTR] = {Kernel_RX_Callback};
-
+// these can be set by the user through ExtIntrHandlerSet(int, callback_t)
+callback_t vec_Ext_Intr_Handler[MAX_EXT_INTR] = 
+{
+    NULL,
+    NULL,    
+    //KernelRXCallback,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL
+};
 
 // Main trap handler 
 // Deals with exceptions or calls ext intr dispatcher
-int trap_handler(int mcause, int mepc, int a0, int a1, int a2, int ecall_func) 
+int TrapHandler(int mcause, int mepc, int ecallFunc, int a0, int a1, int a2) 
 {                                                                                                                
     if (mcause >= 0) 
 	{ // System calls and exceptions
 		
-		if(mcause == 1) // Misaligned instruction address 
+        if(mcause == EX_MISALIGNED_INSTRUCTION_ADDR)
 		{
 			// Treat exception
 			// ....
@@ -32,11 +42,13 @@ int trap_handler(int mcause, int mepc, int a0, int a1, int a2, int ecall_func)
 			 "li 	x29,'T'\n\t" \
 			 "li 	x30,'_'\n\t" \
 			 "li 	x31,'1'\n\t");
+             
+             KernelUARTTX("EXCEPTION: Misaligned instruction addr\n");
 			 
-			// Will get stuck on loop entering exception... ?
+			// Will get stuck on loop entering exception
 			return mepc; 	
 		}
-		else if(mcause == 2) // Illegal instruction
+		else if(mcause == EX_ILLEGAL_INSTRUCTION)
 		{
 			// Treat exception
 			// ....
@@ -51,11 +63,13 @@ int trap_handler(int mcause, int mepc, int a0, int a1, int a2, int ecall_func)
 			 "li 	x29,'T'\n\t" \
 			 "li 	x30,'_'\n\t" \
 			 "li 	x31,'2'\n\t");
+             
+             KernelUARTTX("EXCEPTION: Illegal instruction\n");
 			 
 			// Skip illegal instruction on return 
 			return mepc + 4; 	
 		}
-		else if(mcause == 4)// Misaligned data address
+		else if(mcause == EX_MISALIGNED_DATA_ADDR)
 		{		
 		
 			// DEBUG STRING, SIMULATION ONLY
@@ -68,41 +82,81 @@ int trap_handler(int mcause, int mepc, int a0, int a1, int a2, int ecall_func)
 			 "li 	x29,'T'\n\t" \
 			 "li 	x30,'_'\n\t" \
 			 "li 	x31,'4'\n\t");
-			 
+             
+             KernelUARTTX("EXCEPTION: Misaligned data addr: ");
+             
+             
+            char bytes[30];
+             
+            bytes[0] = (unsigned char)(((mepc >> 28) & 0xF) + 0x41);
+            bytes[1] = '_';
+            bytes[2] = (unsigned char)(((mepc >> 24) & 0xF) + 0x41);
+            bytes[3] = '_';
+            bytes[4] = (unsigned char)(((mepc >> 20) & 0xF) + 0x41);
+            bytes[5] = '_';
+            bytes[6] = (unsigned char)(((mepc >> 16) & 0xF) + 0x41);
+            bytes[7] = '_';
+            bytes[8] = (unsigned char)(((mepc >> 12) & 0xF) + 0x41);
+            bytes[9] = '_';
+            bytes[10] = (unsigned char)(((mepc >> 8) & 0xF) + 0x41);
+            bytes[11] = '_';
+            bytes[12] = (unsigned char)(((mepc >> 4) & 0xF) + 0x41);
+            bytes[13] = '_';
+            bytes[14] = (unsigned char)((mepc & 0xF) + 0x41);
+			bytes[15] = '\n';
+            bytes[16] = '\0';
+            
+            KernelUARTTX(bytes);
+            
+            
+             KernelUARTTX("EXCEPTION END STRING\n");
+             
 			// Will get stuck on loop entering exception  
 			return mepc;
 		}
-		else if(mcause == 8) // ECALL instruction
+		else if(mcause == EX_ECALL)
 		{
 			int retVal = 0;
 			
 			// Do the system call 		
-			switch(ecall_func)
+			switch(ecallFunc)
 			{				
 				case ECALL_EXT_INTR_REG: // Register ext intr handler 
-					Kernel_Ext_Intr_Handler_Set(a0, (callback_t)a1);
+					KernelExtIntrHandlerSet(a0, (callback_t)a1);
 				break;
 				
 				case ECALL_BDP_CFG:	// BDPort config
-					Kernel_BDPort_Setup(a0, a1, a2);
+					KernelBDPortSetup(a0, a1, a2);
 				break;
 				
 				case ECALL_BDP_READ: // BDPort read
-					retVal = Kernel_BDPort_Read();
+					retVal = KernelBDPortRead();
 				break;
 				
 				case ECALL_BDP_WRITE: // BDPort write 
-					Kernel_BDPort_Write(a0);
+					KernelBDPortWrite(a0);
 				break;
 				
 				case ECALL_PIC_MASK: // Set PIC intr mask 
-					Kernel_PIC_Mask(a0);
+					KernelPICMask(a0);
 				break;
 				
 				case ECALL_UART_TX: // Send string to tx 
-					Kernel_UART_TX((char*)a0);
+					KernelUARTTX((char*)a0);
 				break;
 				
+                case ECALL_TIMER_SET_CLK: // set timer base clock 
+                    KernelTimerSetClock(a0);
+                break;
+                
+                case ECALL_TIMER_SET_COUNT: // Set timer count, ms
+                    KernelTimerSetCount(a0);
+                break;
+                
+                case ECALL_TIMER_ENABLE: // enable / disable timer
+                    KernelTimerSetEnabled(a0);
+                break;
+                
 				default:
 				break;			
 			}
@@ -118,7 +172,7 @@ int trap_handler(int mcause, int mepc, int a0, int a1, int a2, int ecall_func)
 			);
 			
 			// DEBUG STRING, SIMULATION ONLY
-			__asm__ volatile 
+			/*__asm__ volatile 
 			("li	x24,'E'\n\t" \
 			 "li	x25,'C'\n\t" \
 			 "li 	x26,'A'\n\t" \
@@ -128,8 +182,8 @@ int trap_handler(int mcause, int mepc, int a0, int a1, int a2, int ecall_func)
 			 "mv 	x30,%0\n\t" \
 			 "li 	x31,''\n\t"
 			 :
-			 : "r"(ecall_func)
-			 );		
+			 : "r"(ecallFunc)
+			 );		*/
 		}
 		
         return mepc + 4; // Return execution at the next inst 
@@ -150,7 +204,7 @@ int trap_handler(int mcause, int mepc, int a0, int a1, int a2, int ecall_func)
 		);
 			
 		// Call appropriate intr handler 
-		Kernel_Ext_Intr_Dispatcher();
+		KernelExtIntrDispatcher();
 	
 		// Restore mstatus and mie 
 		__asm__ volatile
@@ -174,29 +228,29 @@ int trap_handler(int mcause, int mepc, int a0, int a1, int a2, int ecall_func)
 //
 
 // Dispatch interrupts to appropriate handler 
-void Kernel_Ext_Intr_Dispatcher()
+void KernelExtIntrDispatcher()
 {
 	// Get IRQ number from PIC
 	int IRQ_ID = PIC_IRQ_ID;
 	
 	
 	// SIMULATION DEBUG STRING IN REGISTERS
-	__asm__ volatile 
+	/*__asm__ volatile 
 	("li	x24,''\n\t" \
 	 "li	x25,''\n\t" \
 	 "li 	x26,'I'\n\t" \
 	 "li	x27,'N'\n\t" \
 	 "li	x28,'T'\n\t" \
 	 "li	x29,'R'\n\t" \
-	 "li 	x30,'_'\n\t");
-	
+	 "li 	x30,'_'\n\t");*/
+
 	// Treat IRQ based on ID	
 	if(IRQ_ID >= 0 && IRQ_ID < MAX_EXT_INTR)
 	{
 		if(vec_Ext_Intr_Handler[IRQ_ID] != 0)
 			vec_Ext_Intr_Handler[IRQ_ID]();
 		else 
-			Kernel_Ext_Intr_default(); // default handler when there is no assigned callback 
+			KernelExtIntrDefault(IRQ_ID); // default handler when there is no assigned callback 
 	}
 	
 	// Notify PIC that IRQ was treated
@@ -204,15 +258,15 @@ void Kernel_Ext_Intr_Dispatcher()
 }
 
 // Register external intr handler callbacks from user 
-int Kernel_Ext_Intr_Handler_Set(int n, callback_t handler_callback) 
+int KernelExtIntrHandlerSet(int n, callback_t handler_callback) 
 {
 	// Check for valid index 
     if (n < 0 || n >= MAX_EXT_INTR) 
-		return 1; // N_OUT_OF_BOUNDS
+		return N_OUT_OF_BOUNDS;
     
 	// Check for valid callback 
     if (handler_callback == NULL) 
-		return 2; // INVALID_CALLBACK
+		return INVALID_CALLBACK;
 	
 	// Register callback 
     vec_Ext_Intr_Handler[n] = handler_callback;
@@ -221,9 +275,10 @@ int Kernel_Ext_Intr_Handler_Set(int n, callback_t handler_callback)
 }
 
 // Default external interrupt handler 
-void Kernel_Ext_Intr_default()
+void KernelExtIntrDefault(int irqID)
 {
-	__asm__ volatile 
+	// DEBUG SIMULATION
+    __asm__ volatile 
 	("li	x24,''\n\t" \
 	 "li	x25,'I'\n\t" \
 	 "li 	x26,'N'\n\t" \
@@ -231,7 +286,16 @@ void Kernel_Ext_Intr_default()
 	 "li 	x28,'R'\n\t" \
 	 "li 	x29,'_'\n\t" \
 	 "li 	x30,'D'\n\t"
-	);		
+	);
+    
+    /*KernelUARTTX("Default INTR callback: ");
+	char valText[3]; 
+	
+	valText[0] = irqID + 0x30;
+	valText[1] = '\n';
+    valText[2] = '\0';
+    
+	//KernelUARTTX(valText);*/
 }
 
 							//
@@ -249,7 +313,7 @@ void Kernel_Ext_Intr_default()
 // Config: Bit is input / output
 // Enable: Bit is enabled
 // 	 Intr: Bit is interruption (only bits 31 - 24)
-void Kernel_BDPort_Setup(int config, int enable, int intr)
+void KernelBDPortSetup(int config, int enable, int intr)
 {
 	BDPORT_CFG = config;
 	BDPORT_EN = enable;
@@ -257,15 +321,13 @@ void Kernel_BDPort_Setup(int config, int enable, int intr)
 }
 
 // Read int value from BDPort
-int Kernel_BDPort_Read()
+int KernelBDPortRead()
 {
-	int ret = BDPORT_DATA;
-	
-	return ret;
+	return BDPORT_DATA;
 }
 
 // Write to BDPort 
-void Kernel_BDPort_Write(int val)
+void KernelBDPortWrite(int val)
 {
 	BDPORT_DATA = val;
 }
@@ -282,7 +344,7 @@ void Kernel_BDPort_Write(int val)
 //
 
 // Set the PIC intr mask
-void Kernel_PIC_Mask(char val)
+void KernelPICMask(char val)
 {
 	PIC_MASK = val;
 }
@@ -302,7 +364,7 @@ void Kernel_PIC_Mask(char val)
 // Send string over TX 
 // TODO: Add return indicating if TX msg was sent successfuly
 //		 false if TX busy
-void Kernel_UART_TX(char* str)
+void KernelUARTTX(char* str)
 {
 	strCnt = 0;
 	
@@ -321,20 +383,47 @@ volatile int rxCnt = 0;
 // Default RX callback
 // stores the string in an array
 // sends string over tx when '\0' arrives
-void Kernel_RX_Callback()
+void KernelRXCallback()
 {
-	char rx_in = UART_RX;
+	char rxIn = UART_RX;
 
-	rxStr[rxCnt] = rx_in;
+	rxStr[rxCnt] = rxIn;
 
-	if(rx_in == '\0')
+	if(rxIn == '\0')
 	{
-		Kernel_UART_TX((char*)rxStr);
+		KernelUARTTX((char*)rxStr);
 
 		rxCnt = 0;
 	}
 	else
 		rxCnt++;
+}
+
+							//
+							//
+							//
+//////////////////////////////
+
+
+//////////////////////////////
+//
+//	TIMER
+//
+
+
+void KernelTimerSetClock(int clk)
+{
+    TIMER_BASE_CLK = clk;
+}
+
+void KernelTimerSetCount(int cnt)
+{
+    TIMER_COUNT = cnt;
+}
+
+void KernelTimerSetEnabled(int enable)
+{
+    TIMER_ENABLE = enable;
 }
 
 							//

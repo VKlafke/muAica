@@ -79,6 +79,7 @@ package core_pkg is
     instr_excp    : std_logic;
     alu_op        : std_logic_vector(1 downto 0);
     pc            : std_logic_vector(n-1 downto 2);
+    pc_csr        : std_logic_vector(n-1 downto 2);
     data_rs1      : std_logic_vector(n-1 downto 0);
     data_rs2      : std_logic_vector(n-1 downto 0);
     imm           : std_logic_vector(n-1 downto 0);

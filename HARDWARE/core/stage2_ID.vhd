@@ -1,5 +1,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 use work.core_pkg.all;
 
 entity stage2_ID is
@@ -22,6 +23,10 @@ entity stage2_ID is
 end entity stage2_ID;
 
 architecture behavior of stage2_ID is
+
+  type CodeRegion is (BOOTLOADER, TRAP_ENTRY, ECALLS, TRAP_HANDLER, K_EINTR_DISP, K_EINTR_HS, K_EINTR_DEF, K_BDPORT_S, K_UART_TX, BREAK_NUMBER, CB_TIMER, MAIN, OTHER);
+
+  signal codeRegion_s : CodeRegion;
 
   -- Flush ID flag
   signal  flush_id  : std_logic;
@@ -64,6 +69,9 @@ architecture behavior of stage2_ID is
   signal  lui_flag        : std_logic;
   signal  lui_and         : std_logic_vector(n_pc-1 downto 0);
 
+  -- Saved PC value, used as CSR mepc input
+  signal  id_pc_csr       : std_logic_vector(n_pc-1 downto 0);
+
   -- Illegal / not implemented instruction
   signal  id_instr_not_impl : std_logic;
 
@@ -74,6 +82,20 @@ begin
   -- Stage ID flush
   flush_id <= flush_branch OR flush_excp;
 
+  codeRegion_s <= BOOTLOADER   when (unsigned(ifid.pc) < to_unsigned(12, ifid.pc'length)) else
+                  TRAP_ENTRY   when (unsigned(ifid.pc) >= to_unsigned(12, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(86, ifid.pc'length)) else 
+                  ECALLS       when (unsigned(ifid.pc) >= to_unsigned(87, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(113, ifid.pc'length)) else 
+                  TRAP_HANDLER when (unsigned(ifid.pc) >= to_unsigned(114, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(272, ifid.pc'length)) else 
+                  K_EINTR_DISP when (unsigned(ifid.pc) >= to_unsigned(329, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(366, ifid.pc'length)) else 
+                  K_EINTR_HS   when (unsigned(ifid.pc) >= to_unsigned(367, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(393, ifid.pc'length)) else 
+                  K_EINTR_DEF  when (unsigned(ifid.pc) >= to_unsigned(394, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(408, ifid.pc'length)) else 
+                  K_BDPORT_S   when (unsigned(ifid.pc) >= to_unsigned(409, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(429, ifid.pc'length)) else 
+                  K_UART_TX    when (unsigned(ifid.pc) >= to_unsigned(465, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(496, ifid.pc'length)) else 
+                  BREAK_NUMBER when (unsigned(ifid.pc) >= to_unsigned(574, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(609, ifid.pc'length)) else 
+                  CB_TIMER     when (unsigned(ifid.pc) >= to_unsigned(828, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(901, ifid.pc'length)) else 
+                  MAIN         when (unsigned(ifid.pc) >= to_unsigned(902, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(972, ifid.pc'length)) else 
+                  OTHER; 
+
 ------------------------------------------------------------------------------
 ------------------------------------------------------------------------------
 -------------- Hazard Unit: detect data hazard due to loads, example:
@@ -82,7 +104,8 @@ begin
 ------                  the current forwarding, so we stall the pipeline for 1 clock period
 ----- => stall_id_if is the flag for the stage IF, and stall_bubble for the ID
 
-  stall_bubble <=	'1' when (ex2id.mem_r = '1' AND id_mem_w = '0' AND (ex2id.rd = id_rs1 OR ex2id.rd = id_rs2)) else
+  stall_bubble <=	'1' when ((ex2id.mem_r = '1' AND id_mem_w = '0' AND (ex2id.rd = id_rs1 OR ex2id.rd = id_rs2)) OR 
+                            (ex2id.mem_r = '1' AND id_mem_w = '1' AND (ex2id.rd = id_rs1 OR ex2id.rd = id_rs2))) else
                   '0';
 
   stall_id_if  <= stall_bubble AND (NOT(flush_id));
@@ -105,6 +128,8 @@ begin
   lui_and	 <= (others => lui_flag);
 
   id_pc    <= ifid.pc AND lui_and;
+
+  id_pc_csr <= ifid.pc;
 
   --------------------------------------
   -- Check for instructions that weren't implemented
@@ -160,6 +185,7 @@ begin
         idex.alu_op       <= id_alu_op;
         -- pipeline register, others fields
         idex.pc           <= id_pc;
+        idex.pc_csr       <= id_pc_csr;
         idex.data_rs1     <= id_data_rs1;
         idex.data_rs2     <= id_data_rs2;
         idex.imm          <= imm_out;

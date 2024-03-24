@@ -25,11 +25,12 @@ package core_pkg is
 
   ---------------------------------------------
   -- CSR location, and operation
-  constant mstatus_op : std_logic_vector(3 downto 0) := "0000";
-  constant mie_op     : std_logic_vector(3 downto 0) := "0100";
-  constant mtvec_op   : std_logic_vector(3 downto 0) := "0101";
-  constant mepc_op    : std_logic_vector(3 downto 0) := "1001";
-  constant mcause_op  : std_logic_vector(3 downto 0) := "1010";
+  constant mstatus_op   : std_logic_vector(3 downto 0) := "0000";
+  constant mie_op       : std_logic_vector(3 downto 0) := "0100";
+  constant mtvec_op     : std_logic_vector(3 downto 0) := "0101";
+  constant mscratch_op  : std_logic_vector(3 downto 0) := "1000";
+  constant mepc_op      : std_logic_vector(3 downto 0) := "1001";
+  constant mcause_op    : std_logic_vector(3 downto 0) := "1010";
 
   constant csr_RW     : std_logic_vector(2 downto 0) := "001";
   constant csr_RS     : std_logic_vector(2 downto 0) := "010";

@@ -71,6 +71,8 @@ begin
 		if rst = '1' then
 			PortEnable <= (others=>'0');
 			PortData <= (others => '0');
+			PortConfig <= (others => '0');
+			ITREnable <= (others => '0');
 		elsif rising_edge(clk) then
 			for I in 0 to DATA_WIDTH-1 loop
 				if enPortData = '1' or PortConfig(I) = '1' then

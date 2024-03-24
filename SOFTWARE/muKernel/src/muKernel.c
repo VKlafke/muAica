@@ -316,6 +316,7 @@ void KernelExtIntrDefault(int irqID)
 void KernelBDPortSetup(int config, int enable, int intr)
 {
 	BDPORT_CFG = config;
+	//BDPORT_INTR = 0;
 	BDPORT_EN = enable;
 	BDPORT_INTR = intr;
 }
@@ -377,26 +378,11 @@ void KernelUARTTX(char* str)
 	}	
 }
 
-volatile char rxStr[256];
-volatile int rxCnt = 0;
 
-// Default RX callback
-// stores the string in an array
-// sends string over tx when '\0' arrives
-void KernelRXCallback()
+// Get data from RX 
+char KernelRXRead()
 {
-	char rxIn = UART_RX;
-
-	rxStr[rxCnt] = rxIn;
-
-	if(rxIn == '\0')
-	{
-		KernelUARTTX((char*)rxStr);
-
-		rxCnt = 0;
-	}
-	else
-		rxCnt++;
+    return UART_RX;
 }
 
 							//

@@ -14,11 +14,14 @@ entity MemoryCtrl is
     core_idata	 : out  std_logic_vector(n-1 downto 0);
 	valid_iaddr  : in std_logic;
 	stall_icache : in std_logic;
+	wait_i		 : out std_logic;
 
   -- To instruction memory 
-	inst_addr	 : out std_logic_vector(n-1 downto 0);
-	inst_data	 : in std_logic_vector(n-1 downto 0);
-	ce_inst		 : out std_logic;
+	inst_addr	  : out std_logic_vector(n-1 downto 0);
+	inst_data	  : in std_logic_vector(n-1 downto 0);
+	inst_data_out : out std_logic_vector(n-1 downto 0);
+	inst_wbe	  : out std_logic_vector(3 downto 0);
+	ce_inst		  : out std_logic;
 	
   -- Data memory, from core 
     core_daddr 	 : in  std_logic_vector(n-1 downto 0);
@@ -41,13 +44,14 @@ entity MemoryCtrl is
 	wr_TX		 : out std_logic;
 	rd_TX		 : out std_logic;
 	ce_RX		 : out std_logic;
+	rd_RX_dv	 : out std_logic;
 	ce_Timer	 : out std_logic
   );
 end entity MemoryCtrl;
 
 architecture behavioral of MemoryCtrl is
 
-	type State is (st_Idle, st_Mem_Exec, st_Prph_Exec, st_RaW, st_Mem_Wait);
+	type State is (st_Idle, st_Mem_Exec, st_Prph_Exec, st_RaW, st_Mem_Wait, st_Mem_Instr_Write);
 
 	signal currentState : State;
 
@@ -62,8 +66,11 @@ architecture behavioral of MemoryCtrl is
 	signal  be_sig    	:  std_logic_vector(3 downto 0);
 
 	-- Instruction memory signals
-	signal  addr_imem	: std_logic_vector(n-1 downto 0);
+	signal  addr_imem		: std_logic_vector(n-1 downto 0);
 	signal  lastValidiAddr	: std_logic_vector(n-1 downto 0);
+	signal  addr_instr_wr	: std_logic_vector(n-1 downto 0);
+	signal  inst_data_reg   : std_logic_vector(n-1 downto 0);
+	signal 	out_inst_data_reg : std_logic;
 
 	-- Data memory signals 
 
@@ -71,7 +78,7 @@ architecture behavioral of MemoryCtrl is
 	signal	output_reg		: std_logic := '0';
 	signal  data_out_sig	: std_logic_vector(n-1 downto 0);
 	signal  data_core_sig	: std_logic_vector(n-1 downto 0);
-	signal  last_wr_sig	: std_logic_vector(n-1 downto 0);
+	signal  last_wr_sig		: std_logic_vector(n-1 downto 0);
 	signal  last_wr_addr	: std_logic_vector(n-1 downto 0);
 	signal  last_wr_data	: std_logic_vector(n-1 downto 0);
 
@@ -79,25 +86,50 @@ architecture behavioral of MemoryCtrl is
 	signal  addr_p		    : std_logic_vector(7 downto 0);
 	signal	prph_en			: std_logic;
 
+	signal instr_mem_write 		: std_logic;
 
-	signal	test		: std_logic := '0';
+	signal wait_sig			: std_logic;
     
 begin
     
 	-- Instruction memory 
 	addr_imem <= "00" & core_iaddr;
-    inst_addr <= addr_imem when stall_icache = '0' else
-				lastValidiAddr;
+    inst_addr <= addr_instr_wr when instr_mem_write = '1' OR currentState = st_Mem_Instr_Write else 
+				 addr_imem when stall_icache = '0' else
+				 lastValidiAddr;
 				
-	core_idata <= inst_data;
+	core_idata <= inst_data when out_inst_data_reg = '0' else 
+				 inst_data_reg;
+
+	-- Output to instruction memory
+	inst_data_out <= core_ddata when currentState = st_Mem_Instr_Write else 
+					 x"00000000";
+
+	-- Instruction memory write enable
+	inst_wbe <= "1111" when currentState = st_Mem_Instr_Write else 
+				"0000";
+
+	-- This signal is enabled when we have a "Instruction memory write" address coming through
+	instr_mem_write <= '1' when (core_daddr(31) = '1' AND  core_daddr(28) = '1' AND valid_daddr = '1') else
+					'0';
+					
+	-- Stop processor from fetching new instructions while we write to instruction memory
+	wait_i <=  '1' when instr_mem_write = '1' OR currentState = st_Mem_Instr_Write else 
+				'0';
+
+	-- Address that is used to write to the instruction memory
+	addr_instr_wr <= "000000" & core_daddr(27 downto 2) when instr_mem_write = '1' else 
+					 "000000" & addr_data_reg(27 downto 2) when currentState = st_Mem_Instr_Write else 
+					x"00000000";
+
 	-- /Instruction memory
 	
 	-------------------------------------------------------------------------------------------------
 	-- Data memory
 	--
 
-	ce_dm <= '1' when (((currentState = st_Idle AND valid_daddr = '1') OR currentState = st_Mem_Exec) AND prph_en = '0') OR (currentState = st_RaW AND valid_daddr = '1') 
-						OR (currentState = st_Prph_Exec AND valid_daddr = '1' AND core_daddr(31) = '0') OR currentState = st_Mem_Wait else
+	ce_dm <= '1' when (((currentState = st_Idle AND valid_daddr = '1' AND core_daddr(31) = '0') OR currentState = st_Mem_Exec) AND prph_en = '0') OR (currentState = st_RaW AND valid_daddr = '1') 
+						OR (currentState = st_Prph_Exec AND valid_daddr = '1' AND core_daddr(31) = '0')  OR (currentState = st_Mem_Instr_Write AND valid_daddr = '1' and core_daddr(31) = '0') OR currentState = st_Mem_Wait else
 			 '0';	
 	
 	-- Byte enable, used for r/w to assemble incoming / outgoing words correctly
@@ -146,8 +178,8 @@ begin
 		
 	data_sig <= core_ddata when (currentState = st_Mem_Exec OR currentState = st_Prph_Exec OR currentState = st_Mem_Wait) AND we = '1' else (others => 'Z');
 	
-	    -- Write enable
-	wbe_sig <= "0000" when (we = '0' OR rst = '1') else
+	    -- Write enable to data memory
+	wbe_sig <= "0000" when (we = '0' OR rst = '1' OR currentState = st_Mem_Instr_Write) else
            be_sig;
 		   
 		   
@@ -181,8 +213,10 @@ begin
 	--
 	------------------------------------------------------------------------------------------------
 	
-	prph_en <= core_daddr(31) when (currentState = st_Idle AND valid_daddr = '1') else 
-					  addr_data_reg(31) when currentState /= st_Idle; -- MSB of addr controls access to peripherals. 0: memory, 1: peripherals
+
+
+	prph_en <= (core_daddr(31) AND  not core_daddr(28)) when (currentState = st_Idle AND valid_daddr = '1') else 
+					  (addr_data_reg(31) AND not addr_data_reg(28)) when currentState /= st_Idle; -- MSB of addr controls access to peripherals. 0: memory, 1: peripherals
 
 	-- Used to address the peripheral being accessed
 	addr_p <= --core_daddr(19 downto 12) when ((valid_daddr = '1' AND we = '0') AND prph_en = '1') else 
@@ -214,31 +248,54 @@ begin
 
 	-- RX enable
 	ce_RX <= '1' when (currentState = st_Prph_Exec AND addr_p = RX_Addr) else 
-					  '0';
+		     '0';
+
+	-- read RX dv signal
+	rd_RX_dv <= '1' when (currentState = st_Prph_Exec AND addr_p = RX_DV_Addr) else 
+			 '0';
 					
-	-- RX enable
+	-- Timer enable
 	ce_Timer <= '1' when (currentState = st_Prph_Exec AND addr_p = Timer_Addr AND we = '1') else 
-										'0';
+	'0';
 	
 
 	--wait_d <= '0';
 	ce_inst <= '1' when currentState /= st_Mem_Wait else 
 				'0';
 
-			 
-	addr_data <= "00" & core_daddr(n-1 downto 2) when ((currentState = st_Idle OR currentState = st_RaW OR (currentState = st_Prph_Exec  AND core_daddr(31) = '0') OR (currentState = st_Mem_Exec AND core_daddr(31) = '0' AND we = '0')) 
+	addr_data <= "00" & core_daddr(n-1 downto 2) when ((currentState = st_Idle OR 
+														currentState = st_RaW OR 
+														(currentState = st_Prph_Exec  AND core_daddr(31) = '0') OR 
+														(currentState = st_Mem_Exec AND core_daddr(31) = '0' AND we = '0') OR 
+														(currentState = st_Mem_Instr_Write AND core_daddr(31) = '0')) 
 														AND valid_daddr = '1') else 
 				 "00" & addr_data_reg(n-1 downto 2) when (currentState = st_Mem_Exec OR currentState = st_Mem_Wait) else 
 				 (others => 'Z'); 
+
+	wait_d <= '1' when wait_sig = '1' else 
+				'0';
 
 	StateReg: process (clock, rst)
 	begin
 		if rst = '1' then 
 			currentState <= st_Idle;
+			out_inst_data_reg <= '0';
 		elsif rising_edge(clock) then 
 
+			-- instruction addr reg
 			if valid_iaddr = '1' AND stall_icache = '0'  then 
 				lastValidiAddr <= addr_imem;
+			end if;
+
+			-- instruction data reg
+			if instr_mem_write = '1' then 
+				inst_data_reg  <= inst_data;
+			end if;
+
+			-- Instruction data reg output control
+
+			if out_inst_data_reg = '1' then 
+				out_inst_data_reg <= '0';
 			end if;
 
 			if valid_daddr = '1' AND currentState /= st_Mem_Wait then 
@@ -248,7 +305,7 @@ begin
 			end if;
 
 
-			wait_d <= '0';
+			wait_sig <= '0';
 
 			CASE currentState is 
 				-- Idle / reset state
@@ -256,8 +313,11 @@ begin
 				
 					if valid_daddr = '1' AND core_daddr(31) = '0' then 					
 						currentState <= st_Mem_Exec;		
-					elsif valid_daddr = '1' AND core_daddr(31) = '1' then -- Peripherals enable
+					elsif valid_daddr = '1' AND core_daddr(31) = '1' AND core_daddr(28) = '0' then -- Peripherals enable
 						currentState <= st_Prph_Exec;
+					elsif valid_daddr = '1' AND core_daddr(31) = '1' AND core_daddr(28) = '1' then -- Write to instruction memory
+						currentState <= st_Mem_Instr_Write;
+						wait_sig <= '0';
 					else
 						currentState <= st_Idle;
 					end if;
@@ -270,12 +330,12 @@ begin
 						currentState <= st_Prph_Exec;
 					elsif valid_daddr = '1' AND we = '1' AND addr_data_reg(n-1 downto 0) /= core_daddr(n-1 downto 0) then
 						currentState <= st_Mem_Wait;
-						wait_d <= '1';
+						wait_sig <= '1';
 					elsif valid_daddr = '1' AND we = '1' AND addr_data_reg(n-1 downto 2) = core_daddr(n-1 downto 2) then
 						currentState <= st_RaW;
 					elsif valid_daddr = '1' AND we = '1' AND addr_data_reg(n-1 downto 2) /= core_daddr(n-1 downto 2) then
 						currentState <= st_Mem_Wait;
-						wait_d <= '1';
+						wait_sig <= '1';
 					elsif valid_daddr = '1' then 
 						currentState <= st_Mem_Exec;
 					else
@@ -318,8 +378,20 @@ begin
 
 				WHEN st_Mem_Wait =>
 						
-						currentState <= st_Mem_Exec;
-						wait_d <= '0';
+					currentState <= st_Mem_Exec;
+					wait_sig <= '0';
+
+				WHEN st_Mem_Instr_Write =>
+
+					if valid_daddr = '1' AND core_daddr(31) = '0' then 					
+						currentState <= st_Mem_Exec;		
+					else 
+						currentState <= st_Idle;
+					end if;
+
+						wait_sig <= '0';
+						out_inst_data_reg <= '1';
+					
 
 			end CASE;
 

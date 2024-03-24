@@ -27,6 +27,16 @@ architecture behavior of muAica is
     );
   end COMPONENT ResetSynchronizer;
 
+  component PulseExtender is
+    port (
+        clk        : in  std_logic;
+        rst        : in  std_logic;
+        pulse_in   : in  std_logic;
+        pulse_out  : out std_logic
+        -- Add other ports if necessary
+    );
+end component;
+
   -- System reset
   signal  rst_int : std_logic := '1';
   signal  rst_db  : std_logic;
@@ -39,11 +49,14 @@ architecture behavior of muAica is
   signal  core_idata : std_logic_vector(n-1 downto 0);
   signal  core_daddr : std_logic_vector(n-1 downto 0);
   signal  core_ddata : std_logic_vector(n-1 downto 0);
-  signal  data_in_inst : std_logic_vector(n-1 downto 0);
   signal  addr_data : std_logic_vector(n-1 downto 0);
   signal  addr_prph : std_logic_vector(7 downto 0);
   
+  -- Instruction memory
+  signal  inst_wbe       : std_logic_vector(3 downto 0);
+  signal  data_in_inst : std_logic_vector(n-1 downto 0);
 
+  -- Data memory
   signal  data_o_dm : std_logic_vector(n-1 downto 0);  -- Data memory
 
   signal  data_bus : std_logic_vector(n-1 downto 0);  -- Data memory / peripherals bus
@@ -61,6 +74,7 @@ architecture behavior of muAica is
   signal  sh_en         : std_logic;
   signal  we            : std_logic;
   signal  wait_d        : std_logic;
+  signal  wait_i        : std_logic;
   signal  ce_inst        : std_logic;
   
   -- Peripherals
@@ -88,10 +102,16 @@ architecture behavior of muAica is
 
   signal  rx_dv         : std_logic; -- RX -> PIC
   signal  data_o_RX     : std_logic_vector(7 downto 0);  -- RX data out
+  signal  data_o_RX_Buf : std_logic_vector(7 downto 0);  -- RX data buffer out
   signal  rd_RX         : std_logic; -- read from RX, controls the memory ctrl buffer
+  signal  rx_dv_ext     : std_logic; -- extended rx dv signal, for pooling
+  signal  pool_rx      : std_logic; -- pool RX "dv" signal, for when interrupts are disabled
   
   signal ce_Timer   : std_logic; -- Timer write enable
   signal timer_intr : std_logic; -- Timer -> PIC
+
+  signal rst_test : std_logic; -- testing reset
+  signal rst_pulse : std_logic;
 
 begin
 
@@ -119,7 +139,7 @@ begin
     stall_icache  => stall_icache,
     valid_iaddr   => valid_iaddr,
     valid_daddr   => valid_daddr,
-    wait_i        => wait_d,
+    wait_i        => wait_i,
     wait_d        => wait_d,
     sb_en         => sb_en ,
     sh_en         => sh_en ,
@@ -142,11 +162,15 @@ begin
 		core_idata => core_idata,
 		valid_iaddr => valid_iaddr,
 		stall_icache => stall_icache,
+    wait_i       => wait_i,
 
     -- Interface to instruction memory
     ce_inst   => ce_inst,
 		inst_addr => mem_iaddr,
 		inst_data => mem_idata,
+    inst_data_out => data_in_inst,
+    inst_wbe  => inst_wbe,
+
 
 		-- Interface to core (data memory)
 		core_daddr 	=> core_daddr,
@@ -169,13 +193,16 @@ begin
     wr_TX     => tx_dv,
     rd_TX     => rd_TX,
     ce_RX     => rd_RX,
+    rd_RX_dv	=> pool_rx,	  
     ce_Timer  => ce_Timer
 	);
   
-data_bus <=  x"000000" & data_o_RX       when rd_RX  = '1' else 
-                        data_o_bdP       when ce_bdP = '1' else
-            x"000000" & data_o_PIC       when ce_PIC = '1' else
+data_bus <=  x"000000" & data_o_RX_Buf        when rd_RX  = '1' else 
+            --  x"000000" & data_rx           when rd_RX  = '1' else
+                        data_o_bdP           when ce_bdP = '1' else
+            x"000000" & data_o_PIC           when ce_PIC = '1' else
             x"0000000" & "000" & tx_active_s when rd_TX  = '1' else  
+            x"0000000" & "000" & rx_dv_ext       when pool_rx = '1' else 
                         data_o_dm;
 
 ------------------------------------------------------
@@ -226,7 +253,7 @@ data_bus <=  x"000000" & data_o_RX       when rd_RX  = '1' else
 		irq		   => irq_s
 	);
 
-  irq_s <= itrBus(31 downto 26) & '0' & timer_intr;
+  irq_s <= itrBus(31 downto 26) & timer_intr & rx_dv; --timer_intr;
   
     
   UART_TX: entity work.UART_TX_v1
@@ -248,6 +275,37 @@ data_bus <=  x"000000" & data_o_RX       when rd_RX  = '1' else
     o_RX_DV     => rx_dv,
     o_RX_Byte   => data_o_rx
   );
+
+  
+  RX_DATA_BUFFER: entity  work.DataBuffer
+  port map
+  (
+    clk => clk,
+    rst => rst_test,
+    data_in => data_o_rx,
+    data_av => rx_dv,
+    re_en  => rd_RX,
+    data_out => data_o_RX_Buf,
+    data_o_ready => rx_dv_ext
+  );
+
+
+  --process(clk, rst)
+  --begin
+--    if rst = '1' then
+--      data_av <= '0'
+
+    --elsif rising_edge(clk) then
+--      if rx = '1' then
+        --data_rx <= data_o_rx;
+--        data_av <= '1';
+--      end if;
+      
+--      if rd_rx = '1' then
+--        data_av <= '0'
+--      end if;
+      
+--  end process
 
   
   TIMER_0: entity work.TimerInterrupt
@@ -279,7 +337,7 @@ data_bus <=  x"000000" & data_o_RX       when rd_RX  = '1' else
 	)
 	port map (
 		clock     => clk,
-		wbe				=> "0000", -- we ?
+		wbe				=> inst_wbe,
 		ce        => ce_inst,
 		address   => mem_iaddr,  
 		data_i    => data_in_inst,
@@ -311,9 +369,30 @@ DATA_MEMORY: entity work.Memory(behavioral)
   port map
   (
     clk     => clk,
-    rst_in   => rst_bt,
-    rst_out  => rst_db
+    rst_in   => rst_test,
+    rst_out  => rst_pulse
   );
 
+  rst_test <= rst_bt OR timer_intr;
 
+
+  PULSE_EXTENDER: PulseExtender
+  port map
+  (
+    clk => clk,
+    rst => rst_test,
+    pulse_in => rst_pulse,
+    pulse_out => rst_db
+  );
+
+  --PEXTEND_RX_DV: PulseExtender
+  --port map
+  --(
+    --clk => clk,
+    --rst => rst_test,
+    --pulse_in => rx_dv,
+  --  pulse_out => rx_dv_ext
+--  );
+
+  
 end architecture behavior;

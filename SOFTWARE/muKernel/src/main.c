@@ -1,281 +1,263 @@
-#include "muAica.h"
-#include <stdarg.h>
-#include <stdio.h>
+#include "muKernel.h"
 
+// constante endereços programa usuario
 
-extern volatile char* tempStr;
-extern volatile int strCnt;
+void (*UserMainPtr)(void) = (void(*)(void))0x1800;
 
-volatile int countLeft = 0;  // left two 7 seg disp
-volatile int countRight = 0; // right two 7 seg disp 
-volatile int dispCount[4] = {0, 0, 0, 0}; // the number for each 7 seg disp
+int lastReceiveSize = 0;
 
-
-// Convert decimal to 7seg 
-volatile int Number_BCD[16] = 
+void HexToAscii(int num, char* dest) 
 {
-    0xC00,
-    0xF90,
-    0xA40,
-    0xB00,
-    0x990,
-    0x920,
-    0x820,
-    0xF80,
-    0x800,
-    0x900,
-    0xA00, // a
-    0x830, // b
-    0xC60, // c
-    0xA10, // d
-    0x860, // e
-    0x8E0 // f
-};
+    // Start from the end of the buffer, leaving space for the null terminator
+    dest[8] = '\0';
 
-
-void break_number(int number, int* a, int* b) 
-{
-	(*a) = 0;
-	(*b) = number;
-    
-    if(number > 99)
-    {
-        (*a) = 0;
-        (*b) = 0;
+    for (int i = 7; i >= 0; i--) {
+        // Extract the lowest 4 bits (one hex digit)
+        int hexDigit = num & 0xF;
         
-        return;
+        // Convert the hex digit to its ASCII representation
+        if (hexDigit >= 0 && hexDigit <= 9) {
+            // '0' to '9'
+            dest[i] = '0' + hexDigit;
+        } else {
+            // 'A' to 'F'
+            dest[i] = 'A' + (hexDigit - 10);
+        }
+
+        // Shift the number to get the next hex digit in the next iteration
+        num >>= 4;
     }
-
-	while ((*b) >= 10) {
-		(*a)++;
-		(*b) -= 10;
-	}
 }
 
-
-void callback_button_A8()
+void ByteToAsciiHex(unsigned char byte, char* dest) 
 {
-	 int i = 0;
-     
-	 // "Debounce"
-	 while(i < 900000)
-		 i++;
-     
-        
-    int number = countLeft;
-    int a = 0;
-    int b = 0;
+    // Convert the high 4 bits to ASCII hex
+    int high = (byte >> 4) & 0xF;
+    dest[0] = (high <= 9) ? ('0' + high) : ('A' + (high - 10));
+
+    // Convert the low 4 bits to ASCII hex
+    int low = byte & 0xF;
+    dest[1] = (low <= 9) ? ('0' + low) : ('A' + (low - 10));
+
+    // Null-terminate the string
+    dest[2] = '\0';
+}
+
+/*
+int main()
+{
+    char bufRecv[50];
     
-    break_number(number, &a, &b);
-    
-    dispCount[0] = a;
-    dispCount[1] = b;
-	
-    UART_Print("Callback A8: ");
-     
+    for(int i = 0; i < 50; i++)
+    {
+        // Wait for rx data 
+        while(UART_RX_DV == 0);
             
-    char txt[30];
+        bufRecv[i] = KernelRXRead();  
+    }
             
-    txt[0] = (char)(dispCount[0] + 0x30);
-    txt[1] = ' ';
-    txt[2] = (char)(dispCount[1] + 0x30);
-    txt[3] = ' ';
-    txt[4] = (char)(dispCount[2] + 0x30);
-    txt[5] = ' ';
-    txt[6] = (char)(dispCount[3] + 0x30);
-    txt[7] = '\n';
-    txt[8] = '\0';
-    UART_Print(txt);
- 
-}
-
-
-
-void callback_button_D9()
-{
-	 int i = 0;
+    for(int i = 0; i < 50; i++)
+    {
+        // print recv  
+        char strBuf[3];
+                
+        ByteToAsciiHex(bufRecv[i], strBuf);
+        KernelUARTTX(strBuf);
+        KernelUARTTX(" - ");  
+    }         
      
-	 // "Debounce"
-	 while(i < 900000)
-		 i++;
-	 
-	
-    countLeft++;
     
-    if(countLeft > 99)
-        countLeft = 99;
- 
-   
-    int number = countLeft;
-    int a = 0;
-    int b = 0;
-    
-    break_number(number, &a, &b);
-    
-    dispCount[0] = a;
-    dispCount[1] = b;
-}
+    return 0;
+}*/
 
-void callback_button_C4()
-{
-	 int i = 0;
-     
-	 // "Debounce"
-	 while(i < 900000)
-		 i++;
-	 
-	
-    countLeft--;
-    
-    if(countLeft < 0)
-        countLeft = 0;
- 
-   
-    int number = countLeft;
-    int a = 0;
-    int b = 0;
-    
-    break_number(number, &a, &b);
-    
-    dispCount[0] = a;
-    dispCount[1] = b; 
-}
-
-
-
-
-void callback_timer()
-{   
-	int write = Number_BCD[dispCount[0]];
-	
-	// Left most 7 seg
-	write = write | 0x7;
-	
-	BDPort_Write(write);
-    	
-    delay(15000);
-    
-	// Second 7 seg 
-	write = Number_BCD[dispCount[1]];
-	write = write | 0xB;
-	
-	BDPort_Write(write);
-	
-    delay(15000);
-
-	// Third 7 seg
-	
-	write = Number_BCD[dispCount[2]];
-	write = write | 0xD;
-	
-	BDPort_Write(write);
-	
-    delay(15000);
-    
-	// Last 
-	
-	write = Number_BCD[dispCount[3]];
-	write = write | 0xE;
-	
-	BDPort_Write(write);
-    
-    //delay(15000);
-}
 
 int main()
-{	
-	UART_Print("INICIOU\n");
-	
-	// TIMER config
-    TimerSetBaseClock(50000); // 50000 kHz (50 MHz)
-    TimerSetCount(16); // 16 ms
-    TimerSetEnabled(1);
-	
-    
-	//////////////////////////////////////////////////////////////
-	//  								  						//
-	//  Configure the bidirectional port  						//
-	//															//
-	//	Config: 0xFE000000, last 7 bits are input				//
-	//  Enable: 0xFFFFFFFF										//
-	//	  INTR: 0xE0000000, last three bits connected to PIC 		//
-	//////////////////////////////////////////////////////////////
-	
-	int BDP_Cfg  = 0xFE000000;
-	int BDP_En   = 0xFFFFFFFF;
-	int BDP_Intr = 0xE0000000;
-	
-	BDPort_Setup(BDP_Cfg, BDP_En, BDP_Intr);
-	
-	/////////////////////////
-	//  				   //
-	//  Configure the PIC  //
-	//			           //
-	/////////////////////////
-	
-	
-	PIC_Mask(0xE3); // Enable (1110 0011) as interrupts 
-    
-	
-	// Register callbacks 
-	int ret = Ext_Intr_Register_Callback(7, callback_button_D9);
-    Ext_Intr_Register_Callback(6, callback_button_C4);
-    Ext_Intr_Register_Callback(5, callback_button_A8);
-	
-	if(ret == N_OUT_OF_BOUNDS)
-		UART_Print("Ext_Intr_Register_Callback Fail: N_OUT_OF_BOUNDS\n");
-	else if(ret == INVALID_CALLBACK)
-		UART_Print("Ext_Intr_Register_Callback Fail: INVALID_CALLBACK\n");
-	else
-		UART_Print("Callback registered!\n");
-
-    
-    // Register timer callback 
-	Ext_Intr_Register_Callback(0, callback_timer);
-	
-	int secCount = 0;
-    
-	do
-	{
-        secCount++;
+{    
+    // Infinite loop so we always come back to the 
+    // software receiving
+    while(1)
+    {
+        // Send boot message
+        KernelUARTTX(">");   
+  
+        int shiftCount = 24;
+        int recvSize = 0;
         
-        if(secCount >= 1000000)
+        // Get the size of the software that will be sent
+        while(shiftCount >= 0)
         {
-            // Incrementa os displays de 7 seg da direita
-            countRight++;
+            // Wait for rx data 
+            while(UART_RX_DV == 0);
             
-            if(countRight > 99)
-                countRight = 0;
-
-       
-            int number = countRight;
-            int a = 0;
-            int b = 0;
+            char rxData = KernelRXRead();
             
-            break_number(number, &a, &b);
+              
+            // print recv  
+            char strBuf[3];
+                
+            ByteToAsciiHex(rxData, strBuf);
+            KernelUARTTX(strBuf);
+            KernelUARTTX(" - ");        
             
-            dispCount[2] = a;
-            dispCount[3] = b;
+            int temp = rxData << shiftCount;
             
-            /*UART_Print("Sec Counter: ");
-                        
-            char txt[30];
-                    
-            txt[0] = (char)(dispCount[2] + 0x30);
-            txt[1] = ' ';
-            txt[2] = (char)(dispCount[3] + 0x30);
-            txt[3] = ' ';
-            txt[4] = (char)(a + 0x30);
-            txt[5] = ' ';
-            txt[6] = (char)(b + 0x30);
-            txt[7] = '\n';
-            txt[8] = '\0';
-            UART_Print(txt);*/
+            recvSize = recvSize | temp;
             
-            secCount = 0;
-        } 
+            shiftCount -= 8;
+        }
         
-	} while(1);
-		
-	return 0;
+        
+        KernelUARTTX("\nRECEIVED SIZE: ");   
+        
+        // printar tamanho    
+        char strSizeBuf[32];
+            
+        HexToAscii(recvSize, strSizeBuf);
+        KernelUARTTX(strSizeBuf);
+        KernelUARTTX("\n");        
+        
+        lastReceiveSize = recvSize;
+        
+        int i = 0;
+        int recvData = 0;
+        int instAddr = 0x90001800;
+        
+        shiftCount = 24;
+        
+        // Get the software 
+        while(i < recvSize)
+        {
+            // Wait for rx data
+            while(UART_RX_DV == 0);
+            
+            char rxData = KernelRXRead();
+            
+            int temp = rxData << shiftCount;
+            
+            recvData = recvData | temp;
+            
+            shiftCount -= 8;
+            i++;
+                        
+            char strBuf[3];
+                
+            ByteToAsciiHex(rxData, strBuf);
+            KernelUARTTX(strBuf);
+            KernelUARTTX(" - ");     
+            
+            // Commit data to instruction memory
+            if(shiftCount < 0)
+            {
+                *(int*)instAddr = recvData;
+                              
+                // Convert hex to ascii and send data back via UART
+                // to debug
+                char strDataBuf[32];
+                char strAddrBuf[32];
+            
+                HexToAscii(recvData, strDataBuf);
+                HexToAscii(instAddr, strAddrBuf);
+            
+                KernelUARTTX("\nInstr commit: ");
+                KernelUARTTX(strDataBuf);
+                KernelUARTTX(" (");
+                KernelUARTTX(strAddrBuf);
+                KernelUARTTX(")\n");
+                       
+                recvData = 0;
+                instAddr += 4;
+                shiftCount = 24;
+            }
+        }
+        
+        KernelUARTTX("RECEIVED .text\n");   
+        
+        // size .data
+        shiftCount = 24;
+        recvSize = 0;
+        
+        // Get the size of the .data section
+        while(shiftCount >= 0)
+        {
+            // Wait for rx data 
+            while(UART_RX_DV == 0);
+            
+            char rxData = KernelRXRead();
+            
+            int temp = rxData << shiftCount;
+            
+            recvSize = recvSize | temp;
+            
+            shiftCount -= 8;
+        }
+        
+        KernelUARTTX("RECEIVED .data size \n");   
+        
+        // printar tamanho    
+            
+        HexToAscii(recvSize, strSizeBuf);
+        KernelUARTTX(strSizeBuf);
+        KernelUARTTX("\n");        
+        
+        // Receive .data section 
+        
+        i = 0;
+        recvData = 0;
+        int dataAddr = 0x00000400;
+        
+        shiftCount = 24;
+        
+        while(i < recvSize)
+        {
+            // Wait for rx data
+            while(UART_RX_DV == 0);
+            
+            char rxData = KernelRXRead();
+            
+            int temp = rxData << shiftCount;
+            
+            recvData = recvData | temp;
+            
+            shiftCount -= 8;
+            i++;
+            
+            char strBuf[3];
+                
+            ByteToAsciiHex(rxData, strBuf);
+            KernelUARTTX(strBuf);
+            KernelUARTTX(" - ");     
+            
+            // Commit data to data memory
+            if(shiftCount < 0)
+            {
+                *(int*)dataAddr = recvData;
+                
+                recvData = 0;
+                dataAddr += 4;
+                shiftCount = 24;
+            }
+        }
+        
+        KernelUARTTX("Received\n\n");   
+        
+        // Call the user main function
+        UserMainPtr();
+      
+        KernelUARTTX("Finished executing.\nCleaning up.\n");
+        
+        // Clean up last received software from instruction memory 
+        instAddr = 0x90001800;
+        for(int i = 0; i < lastReceiveSize; i++)
+        {
+            *(int*)instAddr = 0;
+            
+            instAddr += 4;
+        }
+        
+        lastReceiveSize = 0;
+    
+        KernelUARTTX("Finished clean up, Ready to receive!\n"); 
+    }
+ 
+    return 0;
 }

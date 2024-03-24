@@ -8,28 +8,39 @@ _bootloader_stackpointer_:
 #----------------------------------------------
 # configure the control/status registers
 _bootloader_csr_:
+
+
     # trap enable configuration
-    li      x30, 0x00000800
-    csrs    mie, x30        # interrupts enabled
-	csrrsi	x0, mie,  8 	# exceptions enabled
-    csrsi   mstatus, 8      # traps enabled
+    #li      x30, 0x00000800
+    #csrs    mie, x30        # interrupts enabled
+	#csrrsi	x0, mie,  8 	# exceptions enabled
+    #csrsi   mstatus, 8      # traps enabled
     
     # main trap handler start address
     la      x30, trap_entry
     csrw    mtvec, x30
     
     # not realy needed
-    csrw    mepc, x0
-    csrw    mcause, x0
+    #csrw    mepc, x0
+    #csrw    mcause, x0
 
     jal    main
+    
     
 
 # Save registers to stack, align trap_handler arguments
 # set return value from ecall, restore registers.
 trap_entry:
+
+    # Save user mode stack pointer to mscratch 
+    csrw mscratch, sp
+    
+    # Set kernel stack pointer 
+    la      sp, _stack_ptr
+    
+    # Reserve space in stack to save user data 
     addi sp, sp, -31 * 4
-  
+    
     sw ra,  0 * 4(sp)	# x1, Return Address
     sw gp,  1 * 4(sp)	# x3, Global pointer
     sw tp,  2 * 4(sp)	# x4, Thread pointer
@@ -129,5 +140,8 @@ trap_entry:
     lw t6,  29 * 4(sp)
 
     addi sp, sp, 31 * 4
+    
+    # Load user mode stack pointer
+    csrr x2, mscratch
 
     mret

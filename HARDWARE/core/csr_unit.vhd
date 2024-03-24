@@ -89,6 +89,11 @@ architecture behavior of csr_unit is
   signal  CAUSE_excp_in : std_logic_vector(3 downto 0);
   signal  CAUSE_intr_in : std_logic_vector(3 downto 0);
 
+  -----------------
+  -- m_scratch register
+  signal  m_scratch     : std_logic_vector(n-1 downto 0) := (others => '0');  -- scratch register
+
+
 begin
 
   intr_en <= MEIE AND MIE;
@@ -116,6 +121,7 @@ begin
               m_epc_out       when  mepc_op,
               m_cause_out     when  mcause_op,
               m_ie_out        when  mie_op,
+              m_scratch       when mscratch_op,
               (others => '-') when  others;
 
   csr_out <= M_out;
@@ -233,6 +239,22 @@ begin
 
       elsif (en = '1' AND csr_sel = mcause_op) then
         m_cause <= m_cause_in;
+
+      end if;
+    end if;
+  end process;
+
+
+  -------------------------------------------------------
+  ------- Machine Scratch
+  process(clk)
+  begin
+    if (rising_edge(clk)) then
+      if (rst = '1') then
+        m_scratch <= (others => '0');
+
+      elsif (en = '1' AND csr_sel = mscratch_op) then
+        m_scratch <= csr_in_op(n-1 downto 0);
 
       end if;
     end if;

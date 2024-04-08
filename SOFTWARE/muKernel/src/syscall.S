@@ -32,15 +32,13 @@ BDPort_Setup:
 	li a7, ECALL_BDP_CFG
 	ecall
 	ret
-				
-				
+							
 .global BDPort_Read
 BDPort_Read:
 	li a7, ECALL_BDP_READ
 	ecall
 	ret
-				
-				
+							
 .global BDPort_Write
 BDPort_Write:
 	li a7, ECALL_BDP_WRITE
@@ -52,10 +50,15 @@ PIC_Mask:
 	li a7, ECALL_PIC_MASK
 	ecall
 	ret
-				
-				
+							
 .global UART_Print
 UART_Print:
 	li a7, ECALL_UART_TX
 	ecall
 	ret
+    
+.global MuSprintf
+MuSprintf:
+    li a7, ECALL_SPRINTF
+    ecall
+    ret

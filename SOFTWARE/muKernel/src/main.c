@@ -6,7 +6,7 @@ void (*UserMainPtr)(void) = (void(*)(void))0x1800;
 
 int lastReceiveSize = 0;
 
-void HexToAscii(int num, char* dest) 
+static void HexToAscii(int num, char* dest) 
 {
     // Start from the end of the buffer, leaving space for the null terminator
     dest[8] = '\0';
@@ -43,36 +43,12 @@ void ByteToAsciiHex(unsigned char byte, char* dest)
     dest[2] = '\0';
 }
 
-/*
-int main()
-{
-    char bufRecv[50];
-    
-    for(int i = 0; i < 50; i++)
-    {
-        // Wait for rx data 
-        while(UART_RX_DV == 0);
-            
-        bufRecv[i] = KernelRXRead();  
-    }
-            
-    for(int i = 0; i < 50; i++)
-    {
-        // print recv  
-        char strBuf[3];
-                
-        ByteToAsciiHex(bufRecv[i], strBuf);
-        KernelUARTTX(strBuf);
-        KernelUARTTX(" - ");  
-    }         
-     
-    
-    return 0;
-}*/
-
 
 int main()
-{    
+{   
+    // Allocate space for a string 
+    char strRet[128];
+    
     // Infinite loop so we always come back to the 
     // software receiving
     while(1)
@@ -90,14 +66,13 @@ int main()
             while(UART_RX_DV == 0);
             
             char rxData = KernelRXRead();
-            
-              
-            // print recv  
-            char strBuf[3];
                 
+            // print recv  
+            /*char strBuf[3];
+            
             ByteToAsciiHex(rxData, strBuf);
-            KernelUARTTX(strBuf);
-            KernelUARTTX(" - ");        
+            KernelSprintf(strRet, "%s - ", strBuf);
+            KernelUARTTX(strRet);*/
             
             int temp = rxData << shiftCount;
             
@@ -106,23 +81,20 @@ int main()
             shiftCount -= 8;
         }
         
-        
-        KernelUARTTX("\nRECEIVED SIZE: ");   
-        
         // printar tamanho    
-        char strSizeBuf[32];
+       /* char strSizeBuf[32];
             
         HexToAscii(recvSize, strSizeBuf);
-        KernelUARTTX(strSizeBuf);
-        KernelUARTTX("\n");        
-        
+        KernelSprintf(strRet, "\nRECEIVED SIZE: %s\n", strSizeBuf);
+        KernelUARTTX(strRet);      
+        */
         lastReceiveSize = recvSize;
         
         int i = 0;
         int recvData = 0;
         int instAddr = 0x90001800;
         
-        shiftCount = 24;
+        shiftCount = 0;
         
         // Get the software 
         while(i < recvSize)
@@ -136,41 +108,47 @@ int main()
             
             recvData = recvData | temp;
             
-            shiftCount -= 8;
+            shiftCount += 8;
             i++;
-                        
+              
+/*              
             char strBuf[3];
                 
             ByteToAsciiHex(rxData, strBuf);
             KernelUARTTX(strBuf);
             KernelUARTTX(" - ");     
-            
+            */
             // Commit data to instruction memory
-            if(shiftCount < 0)
+            if(shiftCount >= 32)
             {
                 *(int*)instAddr = recvData;
                               
                 // Convert hex to ascii and send data back via UART
                 // to debug
-                char strDataBuf[32];
+                /*char strDataBuf[32];
                 char strAddrBuf[32];
             
                 HexToAscii(recvData, strDataBuf);
                 HexToAscii(instAddr, strAddrBuf);
-            
+                
+                KernelSprintf(strRet, "\nInstr commit: %s (%s)\n", strDataBuf, strAddrBuf);
+                
+                KernelUARTTX(strRet);*/
+                
+                /*
                 KernelUARTTX("\nInstr commit: ");
                 KernelUARTTX(strDataBuf);
                 KernelUARTTX(" (");
                 KernelUARTTX(strAddrBuf);
-                KernelUARTTX(")\n");
+                KernelUARTTX(")\n");*/
                        
                 recvData = 0;
                 instAddr += 4;
-                shiftCount = 24;
+                shiftCount = 0;
             }
         }
         
-        KernelUARTTX("RECEIVED .text\n");   
+        //KernelUARTTX("RECEIVED .text\n");   
         
         // size .data
         shiftCount = 24;
@@ -191,21 +169,18 @@ int main()
             shiftCount -= 8;
         }
         
-        KernelUARTTX("RECEIVED .data size \n");   
-        
         // printar tamanho    
+       /* HexToAscii(recvSize, strSizeBuf);
+        KernelSprintf(strRet, "RECEIVED .data size: %s\n", strSizeBuf);
+        KernelUARTTX(strRet);*/
             
-        HexToAscii(recvSize, strSizeBuf);
-        KernelUARTTX(strSizeBuf);
-        KernelUARTTX("\n");        
-        
         // Receive .data section 
         
         i = 0;
         recvData = 0;
         int dataAddr = 0x00000400;
         
-        shiftCount = 24;
+        shiftCount = 0;
         
         while(i < recvSize)
         {
@@ -218,27 +193,32 @@ int main()
             
             recvData = recvData | temp;
             
-            shiftCount -= 8;
+            shiftCount += 8;
             i++;
             
-            char strBuf[3];
-                
-            ByteToAsciiHex(rxData, strBuf);
-            KernelUARTTX(strBuf);
-            KernelUARTTX(" - ");     
+            
+            // If receiving data stops before a multiple of 4
+            if (i >= recvSize)
+            {
+                for (; shiftCount < 32; shiftCount += 8)
+                {
+                    int emptyBits = 0 << shiftCount;
+                    recvData = recvData | emptyBits;
+                }
+            }
             
             // Commit data to data memory
-            if(shiftCount < 0)
+            if(shiftCount >= 32)
             {
                 *(int*)dataAddr = recvData;
                 
                 recvData = 0;
                 dataAddr += 4;
-                shiftCount = 24;
+                shiftCount = 0;
             }
         }
         
-        KernelUARTTX("Received\n\n");   
+        KernelUARTTX("R");   
         
         // Call the user main function
         UserMainPtr();

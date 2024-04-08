@@ -22,6 +22,17 @@
 // Default values
 #define MAX_EXT_INTR 8
 
+// Function implementation
+// M extension signature:
+//   funct7 = 0000001b
+//   opcode = 0110011b
+// MUL: funct3 = 000
+// DIV: funct3 = 100
+
+#define MASK_EXTM  0xFE00707F // 0000 001 rs2 (5b) rs1 (5b) 000 (funct3) rd (5b) 0110011 (opcode)
+
+#define MATCH_MUL 0x02000033 // MUL signature 
+#define MATCH_DIV 0x02004033 // DIV signature
 	
 // Trap causes 
 enum Kernel_Trap_Codes
@@ -51,7 +62,7 @@ int main();
 
 // Handles the treatment of exceptions / interrupts.
 // Gets trap ID from mcause and calls the appropriate handler for it
-int TrapHandler(int mcause, int mepc, int ecallFunc, int a0, int a1, int a2);
+int TrapHandler(int mcause, int mepc, int ecallFunc, int a0, int a1, int a2, unsigned int* sp);
 
 
 ///////////////////////
@@ -135,5 +146,32 @@ void KernelTimerSetEnabled(int enable);
 
 //
 //////////////////////////
+
+
+
+/////////////////////////
+//
+//  Helper functions
+//
+
+// KernelDivide performs a signed division and calculates the remainder.
+// It handles edge cases such as division by zero and INT_MIN overflow carefully.
+int KernelDivide(int dividend, int divisor, int* rem);
+
+// Converts an integer to a string and appends it to the buffer.
+// Returns the number of characters written.
+int KernelIntToString(char* buf, int value);
+
+// Copies the source string into the destination buffer.
+// Returns the number of characters copied (excluding the null terminator).
+int KernelStrcpy(char* dest, const char* src);
+
+// Scans string for formatters (%d / %s / %%) and replaces them with data from 
+// argument list
+void KernelSprintf(char* buf, const char* format, ...);
+
+//
+//////////////////////////
+
 
 #endif

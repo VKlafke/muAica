@@ -9,9 +9,8 @@ _bootloader_stackpointer_:
 # configure the control/status registers
 _bootloader_csr_:
 
-
     # trap enable configuration
-    #li      x30, 0x00000800
+    li      x30, 0x00000800
     #csrs    mie, x30        # interrupts enabled
 	#csrrsi	x0, mie,  8 	# exceptions enabled
     #csrsi   mstatus, 8      # traps enabled
@@ -81,6 +80,8 @@ trap_entry:
     
     # call C function to handle interrupt
 	
+   
+    mv   a6, sp # pass stack pointer so we can access user data
 	mv	 a5, a2
 	mv	 a2, a7
 	mv	 a4, a1

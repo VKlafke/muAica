@@ -23,7 +23,7 @@ architecture behavior of muAica_tb is
   signal  clk   : std_logic;
   signal  rst_bt: std_logic;
 
-  constant half_period : time := 5 ns;
+  constant half_period : time := 10 ns; -- 50 MHZ
 
   signal  intr_sig : std_logic;
   signal  port_io_sig  : std_logic_vector (n-1 downto 0); -- interface with microcontroller port
@@ -87,372 +87,327 @@ begin
   --:10180000130101FC232E810213040104232204FC92
 
   data_tx <= x"00", 
-             x"AC" after 178785 ns,  -- x"AC" 
-             x"73" after 222205 ns,
-             x"00" after 265625 ns,
-             x"01" after 309045 ns,
-             x"13" after 352465 ns, -- 73000113
-             x"00" after 395885 ns, 
-             x"40" after 439305 ns, 
-             x"00" after 482725 ns, 
-             x"ef" after 526145 ns, -- 004000ef
-             x"fc" after 569565 ns, 
-             x"01" after 612985 ns, 
-             x"01" after 656405 ns, 
-             x"13" after 699825 ns, -- fc010113
-             x"02" after 743245 ns, 
-             x"81" after 786665 ns, 
-             x"2e" after 830085 ns, 
-             x"23" after 873505 ns, -- 02812e23
-             x"04" after 916925 ns, 
-             x"01" after 960345 ns, 
-             x"04" after 1003765 ns, 
-             x"13" after 1047185 ns, -- 04010413
-             x"fc" after 1090605 ns, 
-             x"04" after 1134025 ns, 
-             x"22" after 1177445 ns, 
-             x"23" after 1220865 ns, -- fc042223
-             x"fc" after 1264285 ns, 
-             x"04" after 1307705 ns, 
-             x"24" after 1351125 ns, 
-             x"23" after 1394545 ns, -- fc042423
-             x"fc" after 1437965 ns, 
-             x"04" after 1481385 ns, 
-             x"26" after 1524805 ns, 
-             x"23" after 1568225 ns, -- fc042623
-             x"fc" after 1611645 ns, 
-             x"04" after 1655065 ns, 
-             x"28" after 1698485 ns, 
-             x"23" after 1741905 ns, -- fc042823
-             x"fc" after 1785325 ns, 
-             x"04" after 1828745 ns, 
-             x"2a" after 1872165 ns, 
-             x"23" after 1915585 ns, -- fc042a23
-             x"fc" after 1959005 ns, 
-             x"04" after 2002425 ns, 
-             x"2c" after 2045845 ns, 
-             x"23" after 2089265 ns, -- fc042c23
-             x"fc" after 2132685 ns, 
-             x"04" after 2176105 ns, 
-             x"2e" after 2219525 ns, 
-             x"23" after 2262945 ns, -- fc042e23
-             x"fe" after 2306365 ns, 
-             x"04" after 2349785 ns, 
-             x"20" after 2393205 ns, 
-             x"23" after 2436625 ns, -- fe042023
-             x"fe" after 2480045 ns, 
-             x"04" after 2523465 ns, 
-             x"22" after 2566885 ns, 
-             x"23" after 2610305 ns, -- fe042223
-             x"fe" after 2653725 ns, 
-             x"04" after 2697145 ns, 
-             x"24" after 2740565 ns, 
-             x"23" after 2783985 ns, -- fe042423
-             x"fe" after 2827405 ns, 
-             x"04" after 2870825 ns, 
-             x"26" after 2914245 ns, 
-             x"23" after 2957665 ns, -- fe042623
-             x"fe" after 3001085 ns, 
-             x"04" after 3044505 ns, 
-             x"28" after 3087925 ns, 
-             x"23" after 3131345 ns, -- fe042823
-             x"fe" after 3174765 ns, 
-             x"04" after 3218185 ns, 
-             x"2a" after 3261605 ns, 
-             x"23" after 3305025 ns, -- fe042a23
-             x"04" after 3348445 ns, 
-             x"40" after 3391865 ns, 
-             x"00" after 3435285 ns, 
-             x"6f" after 3478705 ns, -- 0440006f
-             x"ff" after 3522125 ns, 
-             x"44" after 3565545 ns, 
-             x"27" after 3608965 ns, 
-             x"83" after 3652385 ns, -- ff442783
-             x"00" after 3695805 ns, 
-             x"17" after 3739225 ns, 
-             x"87" after 3782645 ns, 
-             x"13" after 3826065 ns, -- 00178713
-             x"40" after 3869485 ns, 
-             x"40" after 3912905 ns, 
-             x"06" after 3956325 ns, 
-             x"93" after 3999745 ns, -- 40400693
-             x"ff" after 4043165 ns, 
-             x"44" after 4086585 ns, 
-             x"27" after 4130005 ns, 
-             x"83" after 4173425 ns, -- ff442783
-             x"00" after 4216845 ns, 
-             x"27" after 4260265 ns, 
-             x"97" after 4303685 ns, 
-             x"93" after 4347105 ns, -- 00279793
-             x"00" after 4390525 ns, 
-             x"f6" after 4433945 ns, 
-             x"87" after 4477365 ns, 
-             x"b3" after 4520785 ns, -- 00f687b3
-             x"00" after 4564205 ns, 
-             x"e7" after 4607625 ns, 
-             x"a0" after 4651045 ns, 
-             x"23" after 4694465 ns, -- 00e7a023
-             x"ff" after 4737885 ns, 
-             x"44" after 4781305 ns, 
-             x"27" after 4824725 ns, 
-             x"83" after 4868145 ns, -- ff442783
-             x"00" after 4911565 ns, 
-             x"27" after 4954985 ns, 
-             x"97" after 4998405 ns, 
-             x"93" after 5041825 ns, -- 00279793
-             x"ff" after 5085245 ns, 
-             x"87" after 5128665 ns, 
-             x"87" after 5172085 ns, 
-             x"93" after 5215505 ns, -- ff878793 
-             x"00" after 5258925 ns, 
-             x"87" after 5302345 ns, 
-             x"87" after 5345765 ns, 
-             x"b3" after 5389185 ns, -- 008787b3
-             x"ff" after 5432605 ns, 
-             x"44" after 5476025 ns, 
-             x"27" after 5519445 ns, 
-             x"03" after 5562865 ns, -- ff442703
-             x"fc" after 5606285 ns, 
-             x"e7" after 5649705 ns, 
-             x"a6" after 5693125 ns, 
-             x"23" after 5736545 ns, -- fce7a623
-             x"ff" after 5779965 ns, 
-             x"44" after 5823385 ns, 
-             x"27" after 5866805 ns, 
-             x"83" after 5910225 ns, -- ff442783
-             x"00" after 5953645 ns, 
-             x"17" after 5997065 ns, 
-             x"87" after 6040485 ns, 
-             x"93" after 6083905 ns, -- 00178793 
-             x"fe" after 6127325 ns, 
-             x"f4" after 6170745 ns, 
-             x"2a" after 6214165 ns, 
-             x"23" after 6257585 ns, -- fef42a23
-             x"ff" after 6301005 ns, 
-             x"44" after 6344425 ns, 
-             x"27" after 6387845 ns, 
-             x"03" after 6431265 ns, --  ff442703
-             x"00" after 6474685 ns, 
-             x"b0" after 6518105 ns, 
-             x"07" after 6561525 ns, 
-             x"93" after 6604945 ns, -- 00b00793
-             x"fa" after 6648365 ns, 
-             x"e7" after 6691785 ns, 
-             x"dc" after 6735205 ns, 
-             x"e3" after 6778625 ns, -- fae7dce3
-             x"00" after 6822045 ns, 
-             x"00" after 6865465 ns, 
-             x"07" after 6908885 ns, 
-             x"93" after 6952305 ns, -- 00000793
-             x"00" after 6995725 ns,
-             x"07" after 7039145 ns, 
-             x"85" after 7082565 ns, 
-             x"13" after 7125985 ns, -- 00078513
-             x"03" after 7169405 ns, 
-             x"c1" after 7212825 ns, 
-             x"24" after 7256245 ns,
-             x"03" after 7299665 ns, -- 03c12403
-             x"04" after 7343085 ns, 
-             x"01" after 7386505 ns,
-             x"01" after 7429925 ns, 
-             x"13" after 7473345 ns, -- 04010113
-             x"00" after 7516765 ns,
-             x"00" after 7560185 ns,
-             x"80" after 7603605 ns,
-             x"67" after 7647025 ns, -- 00008067
-             x"00" after 7690445 ns,   -- START OF .DATA
-             x"00" after 7733865 ns,
-             x"00" after 7777285 ns,
-             x"04" after 7820705 ns, -- .data size 
-             x"AB" after 7864125 ns,
-             x"CD" after 7907545 ns,
-             x"EF" after 7950965 ns,
-             x"12" after 7994385 ns; -- 0xABCDEF12
+             x"00" after 87950 ns,
+             x"00" after 174810 ns,
+             x"94" after 261670 ns,  -- 00000094 
+             x"13" after 348530 ns,
+             x"01" after 435390 ns,
+             x"40" after 522250 ns,
+             x"73" after 609110 ns,  -- 73400113
+             x"13" after 695970 ns, 
+             x"01" after 782830 ns, 
+             x"C1" after 869690 ns, 
+             x"FF" after 956550 ns,  -- FFC10113
+             x"23" after 1043410 ns,
+             x"20" after 1130270 ns,
+             x"11" after 1217130 ns,
+             x"00" after 1309990 ns, -- 00112023
+             x"37" after 1396810 ns,
+             x"1F" after 1483810 ns,
+             x"00" after 1570810 ns,
+             x"00" after 1657810 ns, -- 00001F37
+             x"13" after 1744810 ns,
+             x"0F" after 1831810 ns,
+             x"0F" after 1918810 ns,
+             x"80" after 2005810 ns, -- 800F0F13
+             x"73" after 2092810 ns,
+             x"20" after 2179810 ns,
+             x"4F" after 2266810 ns,
+             x"30" after 2353810 ns, -- 304F2073
+             x"73" after 2440810 ns,
+             x"60" after 2527810 ns,
+             x"44" after 2614810 ns,
+             x"30" after 2701810 ns, -- 30446073
+             x"73" after 2788810 ns, 
+             x"60" after 2875810 ns,   
+             x"04" after 2962810 ns,
+             x"30" after 3049810 ns, -- 30046073
+             x"73" after 3136810 ns,
+             x"10" after 3223810 ns,
+             x"10" after 3310810 ns,
+             x"34" after 3397810 ns, -- 34101073
+             x"73" after 3484810 ns,
+             x"10" after 3571810 ns,
+             x"20" after 3658810 ns,
+             x"34" after 3745810 ns, -- 34201073
+             x"EF" after 3832810 ns,
+             x"00" after 3919810 ns,
+             x"00" after 4006810 ns,
+             x"01" after 4093810 ns, -- 010000EF
+             x"83" after 4180810 ns,
+             x"20" after 4267810 ns,
+             x"01" after 4354810 ns,
+             x"00" after 4441810 ns, -- 00012083
+             x"13" after 4528810 ns,
+             x"01" after 4615810 ns,
+             x"41" after 4702810 ns,
+             x"00" after 4789810 ns, -- 00410113
+             x"67" after 4876810 ns,
+             x"80" after 4963810 ns,
+             x"00" after 5050810 ns,
+             x"00" after 5137810 ns, -- 00008067
+             x"13" after 5224810 ns,
+             x"01" after 5311810 ns,
+             x"01" after 5398810 ns,
+             x"FF" after 5485810 ns, -- FF010113
+             x"23" after 5572810 ns,
+             x"26" after 5659810 ns,
+             x"81" after 5746810 ns,
+             x"00" after 5833810 ns, -- 00812623
+             x"13" after 5920810 ns,
+             x"04" after 6007810 ns,
+             x"01" after 6094810 ns,
+             x"01" after 6181810 ns, -- 01010413
+             x"93" after 6268810 ns,
+             x"07" after 6355810 ns,
+             x"70" after 6442810 ns,
+             x"00" after 6529810 ns, -- 00700793
+             x"23" after 6616810 ns,
+             x"2A" after 6703810 ns,
+             x"F4" after 6790810 ns,
+             x"FE" after 6877810 ns, -- FEF42A23
+             x"93" after 6964810 ns,
+             x"07" after 7051810 ns,
+             x"10" after 7138810 ns, 
+             x"00" after 7225810 ns, -- 00100793
+             x"23" after 7312810 ns,
+             x"28" after 7399810 ns,
+             x"F4" after 7486810 ns,
+             x"FE" after 7573810 ns, -- FEF42823
+             x"6F" after 7660810 ns,
+             x"00" after 7747810 ns,
+             x"00" after 7834810 ns,
+             x"02" after 7921810 ns, -- 0200006F
+             x"03" after 8008810 ns,
+             x"27" after 8095810 ns,
+             x"44" after 8182810 ns,
+             x"FF" after 8269810 ns, -- FF442703
+             x"83" after 8356810 ns,
+             x"27" after 8443810 ns,
+             x"04" after 8530810 ns,
+             x"FF" after 8617810 ns, -- FF042783
+             x"B3" after 8704810 ns,
+             x"47" after 8791810 ns,
+             x"F7" after 8878810 ns,
+             x"02" after 8965810 ns, -- 02F747B3
+             x"23" after 9052810 ns,
+             x"2A" after 9139810 ns,
+             x"F4" after 9226810 ns,
+             x"FE" after 9313810 ns, -- FEF42A23
+             x"83" after 9400810 ns,
+             x"27" after 9487810 ns,
+             x"04" after 9574810 ns,
+             x"FF" after 9661810 ns, -- FF042783
+             x"93" after 9748810 ns,
+             x"87" after 9835810 ns,
+             x"17" after 9922810 ns,
+             x"00" after 10009810 ns, -- 00178793
+             x"23" after 10096810 ns,
+             x"28" after 10183810 ns,
+             x"F4" after 10270810 ns,
+             x"FE" after 10357810 ns, -- FEF42823
+             x"03" after 10444810 ns,
+             x"27" after 10531810 ns,
+             x"04" after 10618810 ns,
+             x"FF" after 10705810 ns, -- FF042703
+             x"93" after 10792810 ns,
+             x"07" after 10879810 ns,
+             x"20" after 10966810 ns,
+             x"00" after 11053810 ns, -- 00200793
+             x"E3" after 11140810 ns,
+             x"DE" after 11227810 ns,
+             x"E7" after 11314810 ns,
+             x"FC" after 11401810 ns, -- FCE7DEE3
+             x"83" after 11488810 ns,
+             x"27" after 11575810 ns,
+             x"44" after 11662810 ns,
+             x"FF" after 11749810 ns, -- FF442783
+             x"13" after 11836810 ns,
+             x"85" after 11923810 ns,
+             x"07" after 12010810 ns,
+             x"00" after 12097810 ns, -- 00078513
+             x"03" after 12184810 ns,
+             x"24" after 12271810 ns,
+             x"C1" after 12358810 ns,
+             x"00" after 12445810 ns, -- 00C12403
+             x"13" after 12532810 ns,
+             x"01" after 12619810 ns,
+             x"01" after 12706810 ns,
+             x"01" after 12793810 ns, -- 01010113
+             x"67" after 12880810 ns,
+             x"80" after 12967810 ns,
+             x"00" after 13054810 ns,
+             x"00" after 13141810 ns, -- 00008067
+             x"00" after 13228810 ns,
+             x"00" after 13315810 ns,
+             x"00" after 13402810 ns,
+             x"04" after 13489810 ns, -- 04000000
+             x"7B" after 13576810 ns,
+             x"00" after 13663810 ns,
+             x"00" after 13750810 ns,
+             x"00" after 13837810 ns; -- 0000007B
 
-  tx_dv <= '0', '1' after 45900 ns, '0' after 46000 ns,   -- 00
-                '1' after 91940 ns, '0' after 92000 ns,   -- 00
-                '1' after 135345 ns, '0' after 135400 ns, -- 00
-                '1' after 178785 ns, '0' after 178800 ns, -- 08 , finish sending size
-                '1' after 222205 ns, '0' after 222250 ns,
-                '1' after 265625 ns, '0' after 265700 ns,
-                '1' after 309045 ns, '0' after 309100 ns,
-                '1' after 352465 ns, '0' after 352500 ns, -- 73000113
-                '1' after 395885 ns, '0' after 395900 ns, 
-                '1' after 439305 ns, '0' after 439400 ns, 
-                '1' after 482725 ns, '0' after 482780 ns, 
-                '1' after 526145 ns, '0' after 526200 ns, -- 004000ef 
-                '1' after 569565 ns, '0' after 569600 ns, 
-                '1' after 612985 ns, '0' after 613000 ns, 
-                '1' after 656405 ns, '0' after 656500 ns, 
-                '1' after 699825 ns, '0' after 699900 ns, --fc010113
-                '1' after 743245 ns, '0' after 743300 ns, 
-                '1' after 786665 ns, '0' after 786700 ns, 
-                '1' after 830085 ns, '0' after 830150 ns, 
-                '1' after 873505 ns, '0' after 873600 ns, -- 02812e23
-                '1' after 916925 ns, '0' after 917000 ns, 
-                '1' after 960345 ns, '0' after 960400 ns, 
-                '1' after 1003765 ns, '0' after 1003800 ns, 
-                '1' after 1047185 ns, '0' after 1047200 ns,  -- 04010413
-                '1' after 1090605 ns, '0' after 1090700 ns, 
-                '1' after 1134025 ns, '0' after 1134100 ns, 
-                '1' after 1177445 ns, '0' after 1177500 ns, 
-                '1' after 1220865 ns, '0' after 1228900 ns,  --fc042223
-                '1' after 1264285 ns, '0' after 1264350 ns, 
-                '1' after 1307705 ns, '0' after 1307800 ns, 
-                '1' after 1351125 ns, '0' after 1351200 ns, 
-                '1' after 1394545 ns, '0' after 1394600 ns,  --fc042423
-                '1' after 1437965 ns, '0' after 1438000 ns, 
-                '1' after 1481385 ns, '0' after 1481400 ns, 
-                '1' after 1524805 ns, '0' after 1524900 ns, 
-                '1' after 1568225 ns, '0' after 1568300 ns,  --fc042623
-                '1' after 1611645 ns, '0' after 1611700 ns, 
-                '1' after 1655065 ns, '0' after 1655130 ns, 
-                '1' after 1698485 ns, '0' after 1698550 ns, 
-                '1' after 1741905 ns, '0' after 1742000 ns,  --fc042823
-                '1' after 1785325 ns, '0' after 1785400 ns, 
-                '1' after 1828745 ns, '0' after 1828800 ns, 
-                '1' after 1872165 ns, '0' after 1872200 ns, 
-                '1' after 1915585 ns, '0' after 1915650 ns,  --fc042a23
-                '1' after 1959005 ns, '0' after 1959100 ns, 
-                '1' after 2002425 ns, '0' after 2002500 ns, 
-                '1' after 2045845 ns, '0' after 2045910 ns, 
-                '1' after 2089265 ns, '0' after 2089310 ns,  --fc042c23
-                '1' after 2132685 ns, '0' after 2132750 ns, 
-                '1' after 2176105 ns, '0' after 2176200 ns, 
-                '1' after 2219525 ns, '0' after 2219600 ns, 
-                '1' after 2262945 ns, '0' after 2263050 ns,  --fc042e23
-                '1' after 2306365 ns, '0' after 2306400 ns, 
-                '1' after 2349785 ns, '0' after 2349850 ns, 
-                '1' after 2393205 ns, '0' after 2393300 ns, 
-                '1' after 2436625 ns, '0' after 2436700 ns,  --fe042023
-                '1' after 2480045 ns, '0' after 2480120 ns, 
-                '1' after 2523465 ns, '0' after 2523500 ns, 
-                '1' after 2566885 ns, '0' after 2566920 ns, 
-                '1' after 2610305 ns, '0' after 2610400 ns,  --fe042223
-                '1' after 2653725 ns, '0' after 2653800 ns, 
-                '1' after 2697145 ns, '0' after 2697200 ns, 
-                '1' after 2740565 ns, '0' after 2740600 ns, 
-                '1' after 2783985 ns, '0' after 2784050 ns,  --fe042423
-                '1' after 2827405 ns, '0' after 2827500 ns, 
-                '1' after 2870825 ns, '0' after 2870900 ns, 
-                '1' after 2914245 ns, '0' after 2914300 ns, 
-                '1' after 2957665 ns, '0' after 2957700 ns,  --fe042623
-                '1' after 3001085 ns, '0' after 3001150 ns, 
-                '1' after 3044505 ns, '0' after 3044600 ns, 
-                '1' after 3087925 ns, '0' after 3088050 ns, 
-                '1' after 3131345 ns, '0' after 3131420 ns,  --fe042823
-                '1' after 3174765 ns, '0' after 3174800 ns, 
-                '1' after 3218185 ns, '0' after 3218220 ns, 
-                '1' after 3261605 ns, '0' after 3261700 ns, 
-                '1' after 3305025 ns, '0' after 3305120 ns,  --fe042a23
-                '1' after 3348445 ns, '0' after 3348520 ns, 
-                '1' after 3391865 ns, '0' after 3391920 ns, 
-                '1' after 3435285 ns, '0' after 3435330 ns, 
-                '1' after 3478705 ns, '0' after 3478800 ns,  -- 0440006f
-                '1' after 3522125 ns, '0' after 3522200 ns, 
-                '1' after 3565545 ns, '0' after 3565600 ns, 
-                '1' after 3608965 ns, '0' after 3609120 ns, 
-                '1' after 3652385 ns, '0' after 3652420 ns,  --ff442783
-                '1' after 3695805 ns, '0' after 3695900 ns, 
-                '1' after 3739225 ns, '0' after 3739320 ns, 
-                '1' after 3782645 ns, '0' after 3782720 ns, 
-                '1' after 3826065 ns, '0' after 3826120 ns,  -- 00178713
-                '1' after 3869485 ns, '0' after 3869550 ns, 
-                '1' after 3912905 ns, '0' after 3913000 ns, 
-                '1' after 3956325 ns, '0' after 3956400 ns, 
-                '1' after 3999745 ns, '0' after 3999800 ns,  -- 40000693
-                '1' after 4043165 ns, '0' after 4043220 ns, 
-                '1' after 4086585 ns, '0' after 4086650 ns, 
-                '1' after 4130005 ns, '0' after 4130100 ns, 
-                '1' after 4173425 ns, '0' after 4173500 ns,  --ff442783
-                '1' after 4216845 ns, '0' after 4216900 ns, 
-                '1' after 4260265 ns, '0' after 4260320 ns, 
-                '1' after 4303685 ns, '0' after 4303750 ns, 
-                '1' after 4347105 ns, '0' after 4347200 ns,  -- 00279793
-                '1' after 4390525 ns, '0' after 4390620 ns, 
-                '1' after 4433945 ns, '0' after 4434050 ns, 
-                '1' after 4477365 ns, '0' after 4477400 ns, 
-                '1' after 4520785 ns, '0' after 4520820 ns,  -- 00f687b3
-                '1' after 4564205 ns, '0' after 4564300 ns, 
-                '1' after 4607625 ns, '0' after 4607700 ns, 
-                '1' after 4651045 ns, '0' after 4651120 ns, 
-                '1' after 4694465 ns, '0' after 4694520 ns,  -- 00e7a023
-                '1' after 4737885 ns, '0' after 4737950 ns, 
-                '1' after 4781305 ns, '0' after 4781400 ns, 
-                '1' after 4824725 ns, '0' after 4824800 ns, 
-                '1' after 4868145 ns, '0' after 4868220 ns,  --ff442783
-                '1' after 4911565 ns, '0' after 4911620 ns, 
-                '1' after 4954985 ns, '0' after 4955020 ns, 
-                '1' after 4998405 ns, '0' after 4998500 ns, 
-                '1' after 5041825 ns, '0' after 5041900 ns,  -- 00279793
-                '1' after 5085245 ns, '0' after 5085300 ns, 
-                '1' after 5128665 ns, '0' after 5128720 ns, 
-                '1' after 5172085 ns, '0' after 5172160 ns, 
-                '1' after 5215505 ns, '0' after 5215600 ns,  --ff878793
-                '1' after 5258925 ns, '0' after 5259050 ns, 
-                '1' after 5302345 ns, '0' after 5302420 ns, 
-                '1' after 5345765 ns, '0' after 5345820 ns, 
-                '1' after 5389185 ns, '0' after 5389250 ns,  -- 008787b3
-                '1' after 5432605 ns, '0' after 5432700 ns, 
-                '1' after 5476025 ns, '0' after 5476100 ns, 
-                '1' after 5519445 ns, '0' after 5519500 ns, 
-                '1' after 5562865 ns, '0' after 5562920 ns,  --ff442703
-                '1' after 5606285 ns, '0' after 5606320 ns, 
-                '1' after 5649705 ns, '0' after 5649800 ns, 
-                '1' after 5693125 ns, '0' after 5693200 ns, 
-                '1' after 5736545 ns, '0' after 5736600 ns,  --fce7a623
-                '1' after 5779965 ns, '0' after 5780050 ns, 
-                '1' after 5823385 ns, '0' after 5823420 ns, 
-                '1' after 5866805 ns, '0' after 5866900 ns, 
-                '1' after 5910225 ns, '0' after 5910300 ns,  --ff442783
-                '1' after 5953645 ns, '0' after 5953700 ns, 
-                '1' after 5997065 ns, '0' after 5997120 ns, 
-                '1' after 6040485 ns, '0' after 6040530 ns, 
-                '1' after 6083905 ns, '0' after 6084000 ns,  -- 00178793
-                '1' after 6127325 ns, '0' after 6127400 ns, 
-                '1' after 6170745 ns, '0' after 6170820 ns, 
-                '1' after 6214165 ns, '0' after 6214230 ns, 
-                '1' after 6257585 ns, '0' after 6257630 ns,  --fef42a23
-                '1' after 6301005 ns, '0' after 6301100 ns, 
-                '1' after 6344425 ns, '0' after 6344500 ns, 
-                '1' after 6387845 ns, '0' after 6387920 ns, 
-                '1' after 6431265 ns, '0' after 6431320 ns,  --ff442703
-                '1' after 6474685 ns, '0' after 6474750 ns, 
-                '1' after 6518105 ns, '0' after 6518200 ns, 
-                '1' after 6561525 ns, '0' after 6561600 ns, 
-                '1' after 6604945 ns, '0' after 6605050 ns,  -- 00b00793
-                '1' after 6648365 ns, '0' after 6648420 ns, 
-                '1' after 6691785 ns, '0' after 6691850 ns, 
-                '1' after 6735205 ns, '0' after 6735300 ns, 
-                '1' after 6778625 ns, '0' after 6778700 ns,  --fae7dce3
-                '1' after 6822045 ns, '0' after 6822120 ns, 
-                '1' after 6865465 ns, '0' after 6865520 ns, 
-                '1' after 6908885 ns, '0' after 6908985 ns, 
-                '1' after 6952305 ns, '0' after 6952400 ns,  -- 00000793
-                '1' after 6995725 ns, '0' after 6995800 ns, 
-                '1' after 7039145 ns, '0' after 7039220 ns, 
-                '1' after 7082565 ns, '0' after 7082630 ns, 
-                '1' after 7125985 ns, '0' after 7126050 ns,  -- 00078513
-                '1' after 7169405 ns, '0' after 7169500 ns, 
-                '1' after 7212825 ns, '0' after 7212900 ns, 
-                '1' after 7256245 ns, '0' after 7256300 ns, 
-                '1' after 7299665 ns, '0' after 7299720 ns,  -- 03c12403
-                '1' after 7343085 ns, '0' after 7343160 ns, 
-                '1' after 7386505 ns, '0' after 7386600 ns, 
-                '1' after 7429925 ns, '0' after 7430050 ns, 
-                '1' after 7473345 ns, '0' after 7473420 ns,  -- 04010113
-                '1' after 7516765 ns, '0' after 7516820 ns, 
-                '1' after 7560185 ns, '0' after 7560240 ns, 
-                '1' after 7603605 ns, '0' after 7603700 ns, 
-                '1' after 7647025 ns, '0' after 7647100 ns,  -- 00008067
-                '1' after 7690445 ns, '0' after 7694500 ns,   -- START OF .DATA
-                '1' after 7733865 ns, '0' after 7733900 ns,
-                '1' after 7777285 ns, '0' after 7777330 ns,
-                '1' after 7820705 ns, '0' after 7820800 ns, -- .data size 
-                '1' after 7864125 ns, '0' after 7864200 ns,
-                '1' after 7907545 ns, '0' after 7907600 ns,
-                '1' after 7950965 ns, '0' after 7951020 ns,
-                '1' after 7994385 ns, '0' after 7994430 ns; -- 0xABCDEF12
+  tx_dv <= '0', '1' after 1115 ns, '0' after 1165 ns,   -- 00 / 86860
+                '1' after 87950 ns, '0' after 88000 ns,   -- 00
+                '1' after 174810 ns, '0' after 174860 ns, -- 00
+                '1' after 261670 ns, '0' after 261720 ns, -- 94 , finish sending size
+                '1' after 348530 ns, '0' after 348580 ns,
+                '1' after 435390 ns, '0' after 435440 ns,
+                '1' after 522250 ns, '0' after 522300 ns,
+                '1' after 609110 ns, '0' after 609160 ns,  -- 73400113
+                '1' after 695970 ns, '0' after 696030 ns, 
+                '1' after 782830 ns, '0' after 782880 ns, 
+                '1' after 869690 ns, '0' after 869740 ns, 
+                '1' after 956550 ns, '0' after 956600 ns,  -- FFC10113
+                '1' after 1043410 ns, '0' after 1043460 ns,
+                '1' after 1130270 ns, '0' after 1130320 ns,
+                '1' after 1217130 ns, '0' after 1217180 ns,
+                '1' after 1309990 ns, '0' after 1310040 ns, -- 00112023
+                '1' after 1396810 ns, '0' after 1396860 ns,
+                '1' after 1483810 ns, '0' after 1483860 ns,
+                '1' after 1570810 ns, '0' after 1570860 ns,
+                '1' after 1657810 ns, '0' after 1657860 ns, -- 00001F37
+                '1' after 1744810 ns, '0' after 1744860 ns,
+                '1' after 1831810 ns, '0' after 1831860 ns,
+                '1' after 1918810 ns, '0' after 1918860 ns,
+                '1' after 2005810 ns, '0' after 2005860 ns, -- 800F0F13
+                '1' after 2092810 ns, '0' after 2092860 ns,
+                '1' after 2179810 ns, '0' after 2179860 ns,
+                '1' after 2266810 ns, '0' after 2266860 ns,
+                '1' after 2353810 ns, '0' after 2353860 ns, -- 304F2073
+                '1' after 2440810 ns, '0' after 2440860 ns,
+                '1' after 2527810 ns, '0' after 2527860 ns,
+                '1' after 2614810 ns, '0' after 2614860 ns,
+                '1' after 2701810 ns, '0' after 2701860 ns, -- 30446073
+                '1' after 2788810 ns, '0' after 2788860 ns, 
+                '1' after 2875810 ns, '0' after 2875860 ns,
+                '1' after 2962810 ns, '0' after 2962860 ns,
+                '1' after 3049810 ns, '0' after 3049860 ns, -- 30046073
+                '1' after 3136810 ns, '0' after 3136860 ns,
+                '1' after 3223810 ns, '0' after 3223860 ns,
+                '1' after 3310810 ns, '0' after 3310860 ns,
+                '1' after 3397810 ns, '0' after 3397860 ns, -- 34101073
+                '1' after 3484810 ns, '0' after 3484860 ns,
+                '1' after 3571810 ns, '0' after 3571860 ns,
+                '1' after 3658810 ns, '0' after 3658860 ns,
+                '1' after 3745810 ns, '0' after 3745860 ns, -- 34201073
+                '1' after 3832810 ns, '0' after 3832860 ns,
+                '1' after 3919810 ns, '0' after 3919860 ns,
+                '1' after 4006810 ns, '0' after 4006860 ns,
+                '1' after 4093810 ns, '0' after 4093860 ns, -- 010000EF
+                '1' after 4180810 ns, '0' after 4180860 ns,
+                '1' after 4267810 ns, '0' after 4267860 ns,
+                '1' after 4354810 ns, '0' after 4354860 ns,
+                '1' after 4441810 ns, '0' after 4441860 ns, -- 00012083
+                '1' after 4528810 ns, '0' after 4528860 ns,
+                '1' after 4615810 ns, '0' after 4615860 ns,
+                '1' after 4702810 ns, '0' after 4702860 ns,
+                '1' after 4789810 ns, '0' after 4789860 ns, -- 00410113
+                '1' after 4876810 ns, '0' after 4876860 ns,
+                '1' after 4963810 ns, '0' after 4963860 ns,
+                '1' after 5050810 ns, '0' after 5050860 ns,
+                '1' after 5137810 ns, '0' after 5137860 ns, -- 00008067
+                '1' after 5224810 ns, '0' after 5224860 ns,
+                '1' after 5311810 ns, '0' after 5311860 ns,
+                '1' after 5398810 ns, '0' after 5398860 ns,
+                '1' after 5485810 ns, '0' after 5485860 ns, -- FF010113
+                '1' after 5572810 ns, '0' after 5572860 ns,
+                '1' after 5659810 ns, '0' after 5659860 ns,
+                '1' after 5746810 ns, '0' after 5746860 ns,
+                '1' after 5833810 ns, '0' after 5833860 ns, -- 00812623
+                '1' after 5920810 ns, '0' after 5920860 ns,
+                '1' after 6007810 ns, '0' after 6007860 ns,
+                '1' after 6094810 ns, '0' after 6094860 ns,
+                '1' after 6181810 ns, '0' after 6181860 ns, -- 01010413
+                '1' after 6268810 ns, '0' after 6268860 ns, 
+                '1' after 6355810 ns, '0' after 6355860 ns,
+                '1' after 6442810 ns, '0' after 6442860 ns,
+                '1' after 6529810 ns, '0' after 6529860 ns, -- 01700793
+                '1' after 6616810 ns, '0' after 6616860 ns,
+                '1' after 6703810 ns, '0' after 6703860 ns,
+                '1' after 6790810 ns, '0' after 6790860 ns,
+                '1' after 6877810 ns, '0' after 6877860 ns, -- FEF42A23
+                '1' after 6964810 ns, '0' after 6964860 ns,
+                '1' after 7051810 ns, '0' after 7051860 ns,
+                '1' after 7138810 ns, '0' after 7138860 ns,
+                '1' after 7225810 ns, '0' after 7225860 ns, -- 00100793
+                '1' after 7312810 ns, '0' after 7312860 ns,
+                '1' after 7399810 ns, '0' after 7399860 ns,
+                '1' after 7486810 ns, '0' after 7486860 ns,
+                '1' after 7573810 ns, '0' after 7573860 ns, -- FEF42823
+                '1' after 7660810 ns, '0' after 7660860 ns,
+                '1' after 7747810 ns, '0' after 7747860 ns,
+                '1' after 7834810 ns, '0' after 7834860 ns,
+                '1' after 7921810 ns, '0' after 7921860 ns, -- 0200006F
+                '1' after 8008810 ns, '0' after 8008860 ns,
+                '1' after 8095810 ns, '0' after 8095860 ns,
+                '1' after 8182810 ns, '0' after 8182860 ns,
+                '1' after 8269810 ns, '0' after 8269860 ns, -- FF442703
+                '1' after 8356810 ns, '0' after 8356860 ns,
+                '1' after 8443810 ns, '0' after 8443860 ns,
+                '1' after 8530810 ns, '0' after 8530860 ns,
+                '1' after 8617810 ns, '0' after 8617860 ns, -- FF042783
+                '1' after 8704810 ns, '0' after 8704860 ns,
+                '1' after 8791810 ns, '0' after 8791860 ns,
+                '1' after 8878810 ns, '0' after 8878860 ns,
+                '1' after 8965810 ns, '0' after 8965860 ns, -- 02F747B3
+                '1' after 9052810 ns, '0' after 9052860 ns,
+                '1' after 9139810 ns, '0' after 9139860 ns,
+                '1' after 9226810 ns, '0' after 9226860 ns,
+                '1' after 9313810 ns, '0' after 9313860 ns, -- FEF42A23
+                '1' after 9400810 ns, '0' after 9400860 ns,
+                '1' after 9487810 ns, '0' after 9487860 ns,
+                '1' after 9574810 ns, '0' after 9574860 ns,
+                '1' after 9661810 ns, '0' after 9661860 ns, -- FF042783
+                '1' after 9748810 ns, '0' after 9748860 ns,
+                '1' after 9835810 ns, '0' after 9835860 ns,
+                '1' after 9922810 ns, '0' after 9922860 ns,
+                '1' after 10009810 ns, '0' after 10009860 ns, -- 00178793
+                '1' after 10096810 ns, '0' after 10096860 ns,
+                '1' after 10183810 ns, '0' after 10183860 ns,
+                '1' after 10270810 ns, '0' after 10270860 ns,
+                '1' after 10357810 ns, '0' after 10357860 ns, -- FEF42823
+                '1' after 10444810 ns, '0' after 10444860 ns,
+                '1' after 10531810 ns, '0' after 10531860 ns,
+                '1' after 10618810 ns, '0' after 10618860 ns,
+                '1' after 10705810 ns, '0' after 10705860 ns, -- FF042703
+                '1' after 10792810 ns, '0' after 10792860 ns,
+                '1' after 10879810 ns, '0' after 10879860 ns,
+                '1' after 10966810 ns, '0' after 10966860 ns,
+                '1' after 11053810 ns, '0' after 11053860 ns, -- 00B00793
+                '1' after 11140810 ns, '0' after 11140860 ns,
+                '1' after 11227810 ns, '0' after 11227860 ns,
+                '1' after 11314810 ns, '0' after 11314860 ns,
+                '1' after 11401810 ns, '0' after 11401860 ns, -- FCE7DEE3
+                '1' after 11488810 ns, '0' after 11488860 ns,
+                '1' after 11575810 ns, '0' after 11575860 ns,
+                '1' after 11662810 ns, '0' after 11662860 ns,
+                '1' after 11749810 ns, '0' after 11749860 ns, -- 00000793
+                '1' after 11836810 ns, '0' after 11836860 ns,
+                '1' after 11923810 ns, '0' after 11923860 ns,
+                '1' after 12010810 ns, '0' after 12010860 ns,
+                '1' after 12097810 ns, '0' after 12097860 ns, -- 00078513
+                '1' after 12184810 ns, '0' after 12184860 ns,
+                '1' after 12271810 ns, '0' after 12271860 ns,
+                '1' after 12358810 ns, '0' after 12358860 ns,
+                '1' after 12445810 ns, '0' after 12445860 ns, -- 00C12403
+                '1' after 12532810 ns, '0' after 12532860 ns,
+                '1' after 12619810 ns, '0' after 12619860 ns,
+                '1' after 12706810 ns, '0' after 12706860 ns,
+                '1' after 12793810 ns, '0' after 12793860 ns, -- 01010113
+                '1' after 12880810 ns, '0' after 12880860 ns,
+                '1' after 12967810 ns, '0' after 12967860 ns,
+                '1' after 13054810 ns, '0' after 13054860 ns,
+                '1' after 13141810 ns, '0' after 13141860 ns, -- 00008067
+                '1' after 13228810 ns, '0' after 13228860 ns,
+                '1' after 13315810 ns, '0' after 13315860 ns,
+                '1' after 13402810 ns, '0' after 13402860 ns,
+                '1' after 13489810 ns, '0' after 13489860 ns, -- 04000000
+                '1' after 13576810 ns, '0' after 13576860 ns,
+                '1' after 13663810 ns, '0' after 13663860 ns,
+                '1' after 13750810 ns, '0' after 13750860 ns,
+                '1' after 13837810 ns, '0' after 13837860 ns; -- 0000007B
+
 
  -- intr_sig <= '0', '1' after 1000 ns, '0' after 1050 ns;
  -- port_io_sig(30 downto 27) <= "0000", "1000" after 8000 ns;

@@ -17,4 +17,6 @@
 
 #define ECALL_UART_TX        14
 
+#define ECALL_SPRINTF        15
+
 #endif

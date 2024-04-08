@@ -24,7 +24,7 @@ end entity stage2_ID;
 
 architecture behavior of stage2_ID is
 
-  type CodeRegion is (BOOTLOADER, TRAP_ENTRY, ECALLS, TRAP_HANDLER, K_EINTR_DISP, K_EINTR_HS, K_EINTR_DEF, K_BDPORT_S, K_UART_TX, K_RX_CALLBACK, ASCII_2_INT, MAIN, OTHER);
+  type CodeRegion is (BOOTLOADER, TRAP_ENTRY, ECALLS, TRAP_HANDLER, K_EINTR_DISP, K_EINTR_HS, K_EINTR_DEF, K_BDPORT_S, K_UART_TX, K_RX_CALLBACK, ASCII_2_INT, MAIN, USER, OTHER);
 
   signal codeRegion_s : CodeRegion;
 
@@ -82,18 +82,19 @@ begin
   -- Stage ID flush
   flush_id <= flush_branch OR flush_excp;
 
-  codeRegion_s <= BOOTLOADER    when (unsigned(ifid.pc) < to_unsigned(12, ifid.pc'length)) else
-                  TRAP_ENTRY    when (unsigned(ifid.pc) >= to_unsigned(12, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(86, ifid.pc'length)) else 
-                  ECALLS        when (unsigned(ifid.pc) >= to_unsigned(87, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(113, ifid.pc'length)) else 
-                  TRAP_HANDLER  when (unsigned(ifid.pc) >= to_unsigned(114, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(328, ifid.pc'length)) else 
-                  K_EINTR_DISP  when (unsigned(ifid.pc) >= to_unsigned(329, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(366, ifid.pc'length)) else 
-                  K_EINTR_HS    when (unsigned(ifid.pc) >= to_unsigned(367, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(393, ifid.pc'length)) else 
-                  K_EINTR_DEF   when (unsigned(ifid.pc) >= to_unsigned(394, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(408, ifid.pc'length)) else 
-                  K_BDPORT_S    when (unsigned(ifid.pc) >= to_unsigned(409, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(429, ifid.pc'length)) else 
-                  K_UART_TX     when (unsigned(ifid.pc) >= to_unsigned(465, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(496, ifid.pc'length)) else 
-                  K_RX_CALLBACK when (unsigned(ifid.pc) >= to_unsigned(553, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(561, ifid.pc'length)) else 
+  codeRegion_s <= BOOTLOADER    when (unsigned(ifid.pc) < to_unsigned(7, ifid.pc'length)) else
+                  TRAP_ENTRY    when (unsigned(ifid.pc) >= to_unsigned(7, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(85, ifid.pc'length)) else 
+                  ECALLS        when (unsigned(ifid.pc) >= to_unsigned(86, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(113, ifid.pc'length)) else 
+                  TRAP_HANDLER  when (unsigned(ifid.pc) >= to_unsigned(165, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(505, ifid.pc'length)) else 
+                 -- K_EINTR_DISP  when (unsigned(ifid.pc) >= to_unsigned(329, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(366, ifid.pc'length)) else 
+                -- K_EINTR_HS    when (unsigned(ifid.pc) >= to_unsigned(367, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(393, ifid.pc'length)) else 
+                 -- K_EINTR_DEF   when (unsigned(ifid.pc) >= to_unsigned(394, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(408, ifid.pc'length)) else 
+                 -- K_BDPORT_S    when (unsigned(ifid.pc) >= to_unsigned(409, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(429, ifid.pc'length)) else 
+                  K_UART_TX     when (unsigned(ifid.pc) >= to_unsigned(642, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(673, ifid.pc'length)) else 
+                 -- K_RX_CALLBACK when (unsigned(ifid.pc) >= to_unsigned(553, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(561, ifid.pc'length)) else 
                  -- ASCII_2_INT   when (unsigned(ifid.pc) >= to_unsigned(562, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(614, ifid.pc'length)) else 
-                  MAIN          when (unsigned(ifid.pc) >= to_unsigned(562, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(652, ifid.pc'length)) else 
+                  MAIN          when (unsigned(ifid.pc) >= to_unsigned(1024, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(1207, ifid.pc'length)) else 
+                  USER          when (unsigned(ifid.pc) >= to_unsigned(1800, ifid.pc'length)) else 
                   OTHER; 
 
 ------------------------------------------------------------------------------

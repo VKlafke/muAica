@@ -51,7 +51,7 @@ end entity MemoryCtrl;
 
 architecture behavioral of MemoryCtrl is
 
-	type State is (st_Idle, st_Mem_Exec, st_Prph_Exec, st_RaW, st_Mem_Wait, st_Mem_Instr_Write);
+	type State is (st_Idle, st_Mem_Exec, st_Prph_Exec, st_RaW, st_Mem_Wait, st_Mem_Instr_Access);
 
 	signal currentState : State;
 
@@ -86,7 +86,7 @@ architecture behavioral of MemoryCtrl is
 	signal  addr_p		    : std_logic_vector(7 downto 0);
 	signal	prph_en			: std_logic;
 
-	signal instr_mem_write 		: std_logic;
+	signal instr_mem_access	: std_logic;
 
 	signal wait_sig			: std_logic;
     
@@ -94,7 +94,7 @@ begin
     
 	-- Instruction memory 
 	addr_imem <= "00" & core_iaddr;
-    inst_addr <= addr_instr_wr when instr_mem_write = '1' OR currentState = st_Mem_Instr_Write else 
+    inst_addr <= addr_instr_wr when instr_mem_access = '1' OR currentState = st_Mem_Instr_Access else 
 				 addr_imem when stall_icache = '0' else
 				 lastValidiAddr;
 				
@@ -102,24 +102,24 @@ begin
 				 inst_data_reg;
 
 	-- Output to instruction memory
-	inst_data_out <= core_ddata when currentState = st_Mem_Instr_Write else 
+	inst_data_out <= core_ddata when (currentState = st_Mem_Instr_Access and we = '1') else 
 					 x"00000000";
 
 	-- Instruction memory write enable
-	inst_wbe <= "1111" when currentState = st_Mem_Instr_Write else 
+	inst_wbe <= "1111" when (currentState = st_Mem_Instr_Access and we = '1') else 
 				"0000";
 
-	-- This signal is enabled when we have a "Instruction memory write" address coming through
-	instr_mem_write <= '1' when (core_daddr(31) = '1' AND  core_daddr(28) = '1' AND valid_daddr = '1') else
+	-- This signal is enabled when we have a "Instruction memory access" address coming through
+	instr_mem_access <= '1' when (core_daddr(31) = '1' AND  core_daddr(28) = '1' AND valid_daddr = '1') else
 					'0';
 					
-	-- Stop processor from fetching new instructions while we write to instruction memory
-	wait_i <=  '1' when instr_mem_write = '1' OR currentState = st_Mem_Instr_Write else 
+	-- Stop processor from fetching new instructions while we write/read  instruction memory
+	wait_i <=  '1' when instr_mem_access = '1' OR currentState = st_Mem_Instr_Access else 
 				'0';
 
 	-- Address that is used to write to the instruction memory
-	addr_instr_wr <= "000000" & core_daddr(27 downto 2) when instr_mem_write = '1' else 
-					 "000000" & addr_data_reg(27 downto 2) when currentState = st_Mem_Instr_Write else 
+	addr_instr_wr <= "000000" & core_daddr(27 downto 2) when instr_mem_access = '1' else 
+					 "000000" & addr_data_reg(27 downto 2) when currentState = st_Mem_Instr_Access else 
 					x"00000000";
 
 	-- /Instruction memory
@@ -129,7 +129,7 @@ begin
 	--
 
 	ce_dm <= '1' when (((currentState = st_Idle AND valid_daddr = '1' AND core_daddr(31) = '0') OR currentState = st_Mem_Exec) AND prph_en = '0') OR (currentState = st_RaW AND valid_daddr = '1') 
-						OR (currentState = st_Prph_Exec AND valid_daddr = '1' AND core_daddr(31) = '0')  OR (currentState = st_Mem_Instr_Write AND valid_daddr = '1' and core_daddr(31) = '0') OR currentState = st_Mem_Wait else
+						OR (currentState = st_Prph_Exec AND valid_daddr = '1' AND core_daddr(31) = '0')  OR (currentState = st_Mem_Instr_Access AND valid_daddr = '1' and core_daddr(31) = '0') OR currentState = st_Mem_Wait else
 			 '0';	
 	
 	-- Byte enable, used for r/w to assemble incoming / outgoing words correctly
@@ -168,7 +168,8 @@ begin
 	-- Out to core 
 		-- data_reg_sig goes out when doing read after write
 	core_ddata <= data_core_sig when (((currentState = st_Mem_Exec AND addr_data_reg(n-1 downto 0) /= last_wr_addr(n-1 downto 0)) OR currentState = st_Prph_Exec) AND we = '0') else 
-					last_wr_sig when currentState = st_RaW OR (currentState = st_Mem_Exec AND addr_data_reg(n-1 downto 0) = last_wr_addr(n-1 downto 0) AND we = '0')				   else 
+					last_wr_sig when currentState = st_RaW OR (currentState = st_Mem_Exec AND addr_data_reg(n-1 downto 0) = last_wr_addr(n-1 downto 0) AND we = '0')		    else
+					inst_data when (currentState = st_Mem_Instr_Access and we = '0') else  
 				  (others => 'Z');
 	------------------------------------------------------------------------------------------------
 	
@@ -179,7 +180,7 @@ begin
 	data_sig <= core_ddata when (currentState = st_Mem_Exec OR currentState = st_Prph_Exec OR currentState = st_Mem_Wait) AND we = '1' else (others => 'Z');
 	
 	    -- Write enable to data memory
-	wbe_sig <= "0000" when (we = '0' OR rst = '1' OR currentState = st_Mem_Instr_Write) else
+	wbe_sig <= "0000" when (we = '0' OR rst = '1' OR currentState = st_Mem_Instr_Access) else
            be_sig;
 		   
 		   
@@ -267,7 +268,7 @@ begin
 														currentState = st_RaW OR 
 														(currentState = st_Prph_Exec  AND core_daddr(31) = '0') OR 
 														(currentState = st_Mem_Exec AND core_daddr(31) = '0' AND we = '0') OR 
-														(currentState = st_Mem_Instr_Write AND core_daddr(31) = '0')) 
+														(currentState = st_Mem_Instr_Access AND core_daddr(31) = '0')) 
 														AND valid_daddr = '1') else 
 				 "00" & addr_data_reg(n-1 downto 2) when (currentState = st_Mem_Exec OR currentState = st_Mem_Wait) else 
 				 (others => 'Z'); 
@@ -288,7 +289,7 @@ begin
 			end if;
 
 			-- instruction data reg
-			if instr_mem_write = '1' then 
+			if instr_mem_access = '1' then 
 				inst_data_reg  <= inst_data;
 			end if;
 
@@ -316,7 +317,7 @@ begin
 					elsif valid_daddr = '1' AND core_daddr(31) = '1' AND core_daddr(28) = '0' then -- Peripherals enable
 						currentState <= st_Prph_Exec;
 					elsif valid_daddr = '1' AND core_daddr(31) = '1' AND core_daddr(28) = '1' then -- Write to instruction memory
-						currentState <= st_Mem_Instr_Write;
+						currentState <= st_Mem_Instr_Access;
 						wait_sig <= '0';
 					else
 						currentState <= st_Idle;
@@ -381,7 +382,7 @@ begin
 					currentState <= st_Mem_Exec;
 					wait_sig <= '0';
 
-				WHEN st_Mem_Instr_Write =>
+				WHEN st_Mem_Instr_Access =>
 
 					if valid_daddr = '1' AND core_daddr(31) = '0' then 					
 						currentState <= st_Mem_Exec;		

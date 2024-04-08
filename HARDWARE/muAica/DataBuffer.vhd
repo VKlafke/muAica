@@ -28,7 +28,7 @@ begin
                 -- Capture the incoming data
                 temp_data <= data_in;
                 data_ready <= '1';
-            elsif re_end = '1' and data_ready = '1' then
+            elsif re_en = '1' and data_ready = '1' then
                 -- Clear the data ready signal when read enable is asserted and data is ready
                 data_ready <= '0';
             end if;

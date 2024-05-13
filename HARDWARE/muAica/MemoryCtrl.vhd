@@ -33,8 +33,8 @@ entity MemoryCtrl is
     wait_d       : out std_logic;
 	
   -- Interface with Data Memory / Peripherals
-	addr_data	 : out std_logic_vector(n-1 downto 0);
-	addr_prph	 : out std_logic_vector(7 downto 0);
+	addr_data	  : out std_logic_vector(n-1 downto 0);
+	prph_reg_addr : out std_logic_vector(7 downto 0);
     wbe    		 : out  std_logic_vector(3 downto 0);
 	data_out 	 : out  std_logic_vector(n-1 downto 0);
 	data_in 	 : in std_logic_vector(n-1 downto 0);
@@ -224,7 +224,7 @@ begin
 			  addr_data_reg(19 downto 12) when prph_en = '1' else
 			  (others => '0');
 
-	addr_prph <= addr_data_reg(11 downto 4) when currentState = st_Prph_Exec else
+	prph_reg_addr <= addr_data_reg(11 downto 4) when currentState = st_Prph_Exec else
 		         core_daddr(11 downto 4) when currentState = st_Idle AND valid_daddr = '1';
 
 	-- Data Memory enable

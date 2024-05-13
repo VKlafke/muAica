@@ -2,10 +2,12 @@
 
 // constante endereços programa usuario
 
-void (*UserMainPtr)(void) = (void(*)(void))0x1800;
+void (*UserMainPtr)(void) = (void(*)(void))0x2140;
+
 
 int lastReceiveSize = 0;
 
+/*
 static void HexToAscii(int num, char* dest) 
 {
     // Start from the end of the buffer, leaving space for the null terminator
@@ -41,7 +43,8 @@ void ByteToAsciiHex(unsigned char byte, char* dest)
 
     // Null-terminate the string
     dest[2] = '\0';
-}
+}*/
+
 
 
 int main()
@@ -54,7 +57,7 @@ int main()
     while(1)
     {
         // Send boot message
-        KernelUARTTX(">");   
+        KernelUARTTX("->");   
   
         int shiftCount = 24;
         int recvSize = 0;
@@ -92,7 +95,7 @@ int main()
         
         int i = 0;
         int recvData = 0;
-        int instAddr = 0x90001800;
+        int instAddr = 0x90002140;
         
         shiftCount = 0;
         
@@ -218,13 +221,13 @@ int main()
             }
         }
         
-        KernelUARTTX("R");   
+        KernelUARTTX("Received!\n");   
         
         // Call the user main function
         UserMainPtr();
       
-        KernelUARTTX("Finished executing.\nCleaning up.\n");
-        
+        KernelUARTTX("Finished executing.\n");
+        /*
         // Clean up last received software from instruction memory 
         instAddr = 0x90001800;
         for(int i = 0; i < lastReceiveSize; i++)
@@ -236,7 +239,7 @@ int main()
         
         lastReceiveSize = 0;
     
-        KernelUARTTX("Finished clean up, Ready to receive!\n"); 
+        KernelUARTTX("Finished clean up, Ready to receive!\n"); */
     }
  
     return 0;

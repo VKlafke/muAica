@@ -1,6 +1,8 @@
 #ifndef _MUKERNEL_H_
 #define _MUKERNEL_H_
 
+#include <stdint.h>
+
 // Peripherals addresses
 #define BDPORT_EN 	(*((volatile int*) 0x80000000))
 #define BDPORT_CFG 	(*((volatile int*) 0x80000010))
@@ -29,10 +31,19 @@
 // MUL: funct3 = 000
 // DIV: funct3 = 100
 
-#define MASK_EXTM  0xFE00707F // 0000 001 rs2 (5b) rs1 (5b) 000 (funct3) rd (5b) 0110011 (opcode)
+#define MASK_F7OP  0xFE00007F // Mask "funct7" and "opcode" fields of instruction 
+#define MASK_EXTM  0xFE00707F // Mask "funct7" "funct3" and opcode 
+                              // 0000 001 rs2 (5b) rs1 (5b) 000 (funct3) rd (5b) 0110011 (opcode) < M extension
 
-#define MATCH_MUL 0x02000033 // MUL signature 
-#define MATCH_DIV 0x02004033 // DIV signature
+#define MATCH_M      0x02000033 // 'M' extension instructions 
+#define MATCH_MUL    0x02000033 // MUL signature 
+#define MATCH_MULH   0x02001033 // MULH signature 
+#define MATCH_MULHSU 0x02002033 // MULHSU signature 
+#define MATCH_MULHU  0x02003033 // MULHU signature 
+#define MATCH_DIV    0x02004033 // DIV signature 
+#define MATCH_DIVU   0x02005033 // DIVU signature 
+#define MATCH_REM    0x02006033 // REM signature
+#define MATCH_REMU   0x02007033 // REMU signature
 	
 // Trap causes 
 enum Kernel_Trap_Codes
@@ -147,16 +158,36 @@ void KernelTimerSetEnabled(int enable);
 //
 //////////////////////////
 
+/////////////////////////
+//
+//  'M' extension implementation
+//
 
+int32_t KernelMULHSU(int32_t multiplicand, uint32_t multiplier);
+uint32_t KernelMULHU(uint32_t multiplicand, uint32_t multiplier);
+int32_t KernelMULH(int32_t multiplicand, int32_t multiplier);
+
+// MUL instruction 
+int32_t KernelMUL(int32_t multiplicand, int32_t multiplier);
+
+uint32_t KernelDIVU(uint32_t rs1, uint32_t rs2, uint32_t* rem);
+// KernelDIV performs a signed division and calculates the remainder.
+// It handles edge cases such as division by zero and INT_MIN overflow carefully.
+int KernelDIV(int dividend, int divisor, int* rem);
+
+
+// Decode M type instruction and return type 
+int KernelDecodeMInstruction(int instruction, int* outRs1, int* outRs2, int* outDest, unsigned int* userStack);
+
+//
+////////////////////////
 
 /////////////////////////
 //
 //  Helper functions
 //
 
-// KernelDivide performs a signed division and calculates the remainder.
-// It handles edge cases such as division by zero and INT_MIN overflow carefully.
-int KernelDivide(int dividend, int divisor, int* rem);
+
 
 // Converts an integer to a string and appends it to the buffer.
 // Returns the number of characters written.

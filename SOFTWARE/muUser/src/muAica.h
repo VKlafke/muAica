@@ -35,4 +35,8 @@ void TimerSetCount(int count);
 
 void TimerSetEnabled(int enable);
 
+// ECALL - Helper funcs 
+
+void muSprintf(char* buf, const char* format, ...);
+
 #endif

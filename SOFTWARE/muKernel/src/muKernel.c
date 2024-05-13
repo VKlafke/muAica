@@ -1,6 +1,5 @@
 #include <stddef.h>
 #include <stdarg.h>
-#include <stdint.h>
 #include <limits.h>
 #include "muKernel.h"
 #include "syscall.h"
@@ -133,51 +132,156 @@ int TrapHandler(int mcause, int mepc, int ecallFunc, int a0, int a1, int a2, uns
             
             int inst = *((int*)instAddr); // fetch inst
             
-             
-            // check opcode & function codes
-            if((inst & MASK_EXTM) == MATCH_MUL) 
+            int rs1 = 0;
+            int rs2 = 0;
+            int rd = 0;
+            
+            int OPTypeM = KernelDecodeMInstruction(inst, &rs1, &rs2, &rd, userStack);
+            
+            // reaproveitar multiplicação / divisão em instruções diferentes
+            // VERIFICAR existencia de overflow em mul 
+     
+            // regular multiplication, returns low 32 bits of result 
+            if(OPTypeM == MATCH_MUL)
             {
-                // MUL. extract rd, rs1, rs2 from inst
-                int rd = (inst >> 7) & 0x01F; 
-                int rs1 = (inst >> 15) & 0x01F;
-                int rs2 = (inst >> 20) & 0x01F;
-                            
-                // Fetch data from registers pointed by instruction 
-                int rs1Val = userStack[rs1-2]; // -2 because we don't have reg x2 in our stack. x1 = 0, x3 = 1 ...
-                int rs2Val = userStack[rs2-2];
-
-                // Perform MUL op 
-                // TODO: better mul 
                 int sum = 0;
-                for(int i = 0; i < rs1Val; i++)
+                                
+                // If any of the numbers to be multiplied is zero, skip mul 
+                if(rs1 != 0 && rs2 != 0)
                 {
-                    sum += rs2Val;
-                }                  
+                    sum = KernelMUL(rs1, rs2);
+                }                
                 
-                userStack[rd-2] = sum;
-              
-                return mepc + 4; // done, resume at epc+4
+                // Store result in user stack 
+                userStack[rd] = sum;
+           
+                return mepc + 4; // done, resume at epc+4 
             }
-            else if((inst & MASK_EXTM) == MATCH_DIV)
-            {
-                // MUL. extract rd, rs1, rs2 from inst
-                int rd = (inst >> 7) & 0x01F; 
-                int rs1 = (inst >> 15) & 0x01F;
-                int rs2 = (inst >> 20) & 0x01F;
+            else if(OPTypeM == MATCH_MULH)
+            { // signed - signed mul, return high 32 bits 
+                
+                int sum = 0;
+                                
+                // If any of the numbers to be multiplied is zero, skip mul 
+                if(rs1 != 0 && rs2 != 0)
+                {
+                    sum = KernelMULH(rs1, rs2);
+                }                
+                
+                // Store result in user stack 
+                userStack[rd] = sum;
+           
+                return mepc + 4; // done, resume at epc+4        
+            }
+            else if(OPTypeM == MATCH_MULHSU)
+            { // signed - unsigned mul, return high 32 bits 
+                
+                int sum = 0;
+                                
+                // If any of the numbers to be multiplied is zero, skip mul 
+                if(rs1 != 0 && rs2 != 0)
+                {
+                    sum = KernelMULHSU(rs1, rs2);
+                }                
+                
+                // Store result in user stack 
+                userStack[rd] = sum;
+           
+                return mepc + 4; // done, resume at epc+4        
+            }
+            else if(OPTypeM == MATCH_MULHU)
+            { // unsigned - unsigned mul, return high 32 bits 
+                
+                int sum = 0;
+                                
+                // If any of the numbers to be multiplied is zero, skip mul 
+                if(rs1 != 0 && rs2 != 0)
+                {
+                    sum = KernelMULHU(rs1, rs2);
+                }                
+                
+                // Store result in user stack 
+                userStack[rd] = sum;
+           
+                return mepc + 4; // done, resume at epc+4        
+            }
+            else if(OPTypeM == MATCH_DIV)
+            { // signed - signed div 
+                
+                // If dividend is 0, skip operation and return 0
+                if(rs1 == 0)
+                {
+                    userStack[rd] = 0;
+                    
+                    return mepc + 4;
+                }
                             
                 // Fetch data from registers pointed by instruction 
-                int dividend = userStack[rs1-2]; // -2 because we don't have reg x2 in our stack. x1 = 0, x3 = 1 ...
-                int divisor = userStack[rs2-2];        
+                int dividend = rs1;
+                int divisor  = rs2;
                 
                 // Do the division 
-                int result = KernelDivide(dividend, divisor, NULL);
+                int result = KernelDIV(dividend, divisor, NULL);
                 
-                userStack[rd-2] = result;
+                userStack[rd] = result;
               
-                return mepc + 4; // done, resume at epc+4
-                
+                return mepc + 4; // done, resume at epc+4           
             }
-
+            else if(OPTypeM == MATCH_DIVU)
+            { // unsigned - unsigned div 
+                
+                // If dividend is 0, skip operation and return 0
+                if(rs1 == 0)
+                {
+                    userStack[rd] = 0;
+                    
+                    return mepc + 4;
+                }
+                            
+                // Fetch data from registers pointed by instruction 
+                int dividend = rs1;
+                int divisor  = rs2;
+                
+                // Do the division 
+                int result = KernelDIVU(dividend, divisor, NULL);
+                
+                userStack[rd] = result;
+              
+                return mepc + 4; // done, resume at epc+4           
+            }
+            else if(OPTypeM == MATCH_REM)
+            { // remainder of signed-signed div op 
+                                 
+                // Fetch data from registers pointed by instruction 
+                int dividend = rs1;
+                int divisor  = rs2;
+                int rem = 0;
+                
+                // Do the division 
+                int result = KernelDIV(dividend, divisor, &rem);
+                
+                userStack[rd] = rem;
+                
+                return mepc + 4; // done, resume at epc+4           
+            }
+            else if(OPTypeM == MATCH_REMU)
+            { // remainder of unsigned-unsigned div op 
+                                 
+                // Fetch data from registers pointed by instruction 
+                int dividend = rs1;
+                int divisor  = rs2;
+                int rem = 0;
+                
+                // Do the division 
+                int result = KernelDIVU(dividend, divisor, &rem);
+                
+                userStack[rd] = rem;
+                
+                return mepc + 4; // done, resume at epc+4           
+            }
+            else
+                KernelUARTTX("EXCEPTION: ILLEGAL INSTRUCTION\n");
+             
 			 
 			// Skip illegal instruction on return 
 			return mepc + 4; 	
@@ -530,52 +634,191 @@ void KernelTimerSetEnabled(int enable)
 							//
 //////////////////////////////
 
-
-//////////////////////////////
+/////////////////////////
 //
-//	Helper functions
+//  'M' extension implementation
 //
 
-unsigned int KernelMultiply(unsigned int multiplicand, unsigned int multiplier)
+// Function to emulate the MULHSU instruction in RISC-V
+int32_t KernelMULHSU(int32_t multiplicand, uint32_t multiplier)
 {
-	unsigned int product = 0; // Initialize the product to 0
+	uint64_t product = 0;  // To hold the full product without loss
+	int32_t high = 0;      // To extract and return the high 32 bits
+	int sign = multiplicand < 0 ? -1 : 1;  // Determine the sign of rs1
 
-	while (multiplier > 0) 
+	// Use absolute value of rs1 for multiplication
+	uint32_t abs_rs1 = multiplicand < 0 ? (uint32_t)(-multiplicand) : (uint32_t)multiplicand;
+
+	// Iterate through each bit of rs2
+	for (int i = 0; i < 32; i++) 
 	{
-		// Check if the least significant bit of the multiplier is 1
-		if (multiplier & 1) 
-		{	
-			product += multiplicand; // Add the multiplicand to the product if the current bit of multiplier is 1
+		if (multiplier & (1U << i))
+		{
+			product += ((uint64_t)abs_rs1 << i);
 		}
-		multiplicand <<= 1; // Left shift the multiplicand (equivalent to multiplying it by 2)
-		multiplier >>= 1; // Right shift the multiplier, moving to the next bit
 	}
 
-	return product; // Return the final product
+	// Adjust the sign of the product
+	if (sign == -1)
+	{
+		product = -(int64_t)product;
+	}
+
+	// Shift the product right by 32 bits to get the high part
+	high = (int32_t)(product >> 32);
+
+	// Apply the sign of rs1 to the result
+	return high;
+}
+
+// Function to emulate the MULHU instruction in RISC-V for unsigned integers
+uint32_t KernelMULHU(uint32_t multiplicand, uint32_t multiplier)
+{
+	uint64_t product = 0;  // To hold the full product without loss
+	uint32_t high = 0;     // To extract and return the high 32 bits
+
+	// Iterate through each bit of rs2
+	for (int i = 0; i < 32; i++) 
+	{
+		if (multiplier & (1U << i))
+		{
+			product += ((uint64_t)multiplicand << i);
+		}
+	}
+
+	// Shift the product right by 32 bits to get the high part
+	high = (uint32_t)(product >> 32);
+
+	return high;
+}
+
+// Function to emulate the MULH instruction in RISC-V for signed integers
+int32_t KernelMULH(int32_t multiplicand, int32_t multiplier)
+{
+	int64_t high = 0; // This will eventually hold the high 32 bits of the result
+	uint32_t abs_multiplicand = multiplicand < 0 ? (uint32_t)(-multiplicand) : (uint32_t)multiplicand;
+	uint32_t abs_multiplier = multiplier < 0 ? (uint32_t)(-multiplier) : (uint32_t)multiplier;
+	int64_t temp_product = 0;
+
+	int sign = (multiplicand < 0) ^ (multiplier < 0) ? -1 : 1;  // Determine the sign of the result
+
+	// Iterate through each bit of rs2
+	for (int i = 0; i < 32; i++) 
+	{
+		if (abs_multiplier & (1 << i))
+		{
+			temp_product += ((int64_t)abs_multiplicand << i);
+		}
+	}
+
+	// Adjust the sign of the product
+	if (sign == -1)
+	{
+		temp_product = -temp_product;
+	}
+
+	// Shift right to get the high part
+	high = temp_product >> 32;
+
+	// Adjust sign
+	return (int32_t)high;
+}
+
+// MUL instruction 
+int32_t KernelMUL(int32_t multiplicand, int32_t multiplier) 
+{
+	int64_t product = 0;  // Using int64_t to handle potential overflow during multiplication
+	int32_t sign = (multiplicand < 0) ^ (multiplier < 0) ? -1 : 1;  // Determine the sign of the result
+
+	// Convert multiplicand and multiplier to their absolute values to simplify multiplication    
+	uint32_t abs_multiplicand = multiplicand < 0 ? (uint32_t)(-multiplicand) : (uint32_t)multiplicand;
+	uint32_t abs_multiplier = multiplier < 0 ? (uint32_t)(-multiplier) : (uint32_t)multiplier;
+
+
+	// Perform multiplication using the shift-and-add method
+	while (abs_multiplier != 0) 
+	{
+		if (abs_multiplier & 1) 
+		{
+			product += abs_multiplicand;  // Add the multiplicand to the product if the current bit of multiplier is 1
+		}
+
+		abs_multiplicand <<= 1;  // Left shift the multiplicand (equivalent to multiplying it by 2)
+		abs_multiplier >>= 1;    // Right shift the multiplier, moving to the next bit
+	}
+
+	// Adjust the sign of the product
+	if (sign == -1)
+	{
+		product = -product; 
+	}
+
+	// Cast and return only the lower 32 bits of the product, simulating the behavior of the RISC-V MUL instruction
+	return (int32_t)(product);
+}
+
+// Function to emulate the DIVU instruction in RISC-V for unsigned division
+uint32_t KernelDIVU(uint32_t rs1, uint32_t rs2, uint32_t* rem) 
+{
+	// Check for division by zero. This condition is handled first to prevent division errors.
+	// return all bits set and remainder is the dividend
+	if (rs2 == 0)
+	{
+		if (rem != NULL)
+			*rem = rs1; // Set remainder to dividend if pointer is not NULL
+
+		// KernelUARTTX("{EXCEPTION} - DIV BY ZERO - ");
+
+		return UINT32_MAX; // Return error code for division by zero
+	}
+
+	uint32_t quotient = 0;
+	uint32_t remainder = rs1;  // Start with the remainder equal to rs1
+	int i;
+
+	// Perform long division from the most significant bit
+	for (i = 31; i >= 0; i--) 
+	{
+		if ((remainder >> i) >= rs2) 
+		{
+			remainder -= rs2 << i;
+			quotient |= 1U << i;
+		}
+	}
+
+	// Set remainder if required
+	if (rem != NULL)
+		*rem = remainder;
+
+	return quotient;
 }
 
 // KernelDivide performs a signed division and calculates the remainder.
 // It handles edge cases such as division by zero and INT_MIN overflow carefully.
-int KernelDivide(int dividend, int divisor, int* rem)
+int KernelDIV(int dividend, int divisor, int* rem)
 {
 	// Check for division by zero. This condition is handled first to prevent division errors.
 	// It returns INT32_MIN as an error code and sets the remainder to 0 if the pointer is not NULL.
 	if (divisor == 0)
 	{
-		if (rem != NULL) *rem = 0; // Set remainder to 0 if pointer is not NULL
+		if (rem != NULL) 
+			*rem = dividend; // Set remainder to dividend if pointer is not NULL
 
-		// KernelUARTTX("{DIV EXCEPTION} - DIV BY ZERO - ");
+		KernelUARTTX("{EXCEPTION} - DIV BY ZERO - \n");
 
-		return INT32_MIN; // Return error code for division by zero
+		return -1; // Return error code for division by zero
 	}
 
 	// Handle the special case of INT_MIN divided by -1, which causes overflow in a 32-bit environment.
-	// Returns INT_MAX as the closest valid result and sets the remainder to 0.
+	// Returns INT_MIN and sets the remainder to 0, per spec.
 	if (dividend == INT_MIN && divisor == -1)
 	{
-		if (rem != NULL) *rem = 0; // Set remainder to 0
-		// KernelUARTTX("{DIV EXCEPTION} - OVERFLOW - ");
-		return INT_MAX; // Return INT_MAX to avoid overflow
+		if (rem != NULL) 
+			*rem = 0; // Set remainder to 0
+
+		KernelUARTTX("{EXCEPTION} - OVERFLOW - \n");
+        
+		return INT_MIN;
 	}
 
 	// Convert dividend and divisor to their absolute values to simplify the division operation.
@@ -620,7 +863,93 @@ int KernelDivide(int dividend, int divisor, int* rem)
 	return result; // Return the calculated quotient
 }
 
+// Check if instruction is part of 'M' extension, decode if true.
+// returns instruction ID
+// "outRs1" and "outRs2" return the value extracted from the registers pointed by the instruction 
+// "outDest" returns the ID of the dest register, corrected for our modified user stack.
+int KernelDecodeMInstruction(int instruction, int* outRs1, int* outRs2, int* outDest, unsigned int* userStack)
+{
+    // Check if funct7 and opcode match M extension
+    if((instruction & MASK_F7OP) != MATCH_M) 
+        return -1; 
+    
+    // Get register IDs
+    int rd = (instruction >> 7) & 0x01F; 
+    int rs1 = (instruction >> 15) & 0x01F;
+    int rs2 = (instruction >> 20) & 0x01F;
 
+    // Special case for x0 reg, since it's not in the stack 
+    // and x2 is also not available.
+    if(rs1 == 0 || rs1 == 2)
+    {
+        // no caso de rs1 = x2 printar erro / exceção 
+        
+        KernelUARTTX("[rs1] Error! Trying to multiply using x2 (sp) as operand.\n\n");
+        
+        *outRs1 = 0;
+    }
+    else if(rs1 == 1)
+    { // Special case for x1 reg 
+        *outRs1 = userStack[0];
+    }
+    else
+    {
+        // -2 because we don't have reg x2 in our stack. x1 = 0, x3 = 1 ...
+        *outRs1 = userStack[rs1-2];
+    }
+    
+    // Special case for x0 reg, since it's not in the stack 
+    // and x2 is also not available.
+    if(rs2 == 0 || rs2 == 2)
+    {   
+        KernelUARTTX("[rs2] Error! Trying to multiply using x2 (sp) as operand.\n\n");
+        *outRs2 = 0;
+    }
+    else if(rs2 == 1)
+    { // Special case for x1 reg 
+        *outRs2 = userStack[0];
+    }
+    else
+    {
+        // -2 because we don't have reg x2 in our stack. x1 = 0, x3 = 1 ...
+        *outRs2 = userStack[rs2-2];
+    }
+    
+    // destination reg, corrected for our stack 
+    *outDest = rd-2;
+    
+    // return type of operation
+    if((instruction & MASK_EXTM) == MATCH_MUL) 
+        return MATCH_MUL; // signed MUL
+    else if((instruction & MASK_EXTM) == MATCH_MULH) 
+        return MATCH_MULH; // signed MULH
+    else if((instruction & MASK_EXTM) == MATCH_MULHSU) 
+        return MATCH_MULHSU; // signed/unsigned MULHSU
+    else if((instruction & MASK_EXTM) == MATCH_MULHU) 
+        return MATCH_MULHU; // signed/unsigned MULHU
+    else if((instruction & MASK_EXTM) == MATCH_DIV)
+        return MATCH_DIV; // signed DIV
+    else if((instruction & MASK_EXTM) == MATCH_DIVU)
+        return MATCH_DIVU; // unsigned DIV
+    else if((instruction & MASK_EXTM) == MATCH_REM)
+        return MATCH_REM; // signed remainder
+    else if((instruction & MASK_EXTM) == MATCH_REMU)
+        return MATCH_REMU; // unsigned remainder
+    else 
+        return -1; // not found
+}
+
+
+							//
+							//
+							//
+//////////////////////////////
+
+//////////////////////////////
+//
+//	Helper functions
+//
+/*
 // Converts an integer to a string and appends it to the buffer.
 // Returns the number of characters written.
 int KernelIntToString(char* buf, int value) 
@@ -719,7 +1048,7 @@ void KernelSprintf(char* buf, const char* format, ...)
 
 	*buf_ptr = '\0'; // Null-terminate the buffer
 	va_end(args);
-}
+}*/
 							//
 							//
 							//

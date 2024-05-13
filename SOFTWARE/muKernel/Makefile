@@ -14,17 +14,17 @@ LINK_OBJs		= $(MUKERNEL_S_OUTPUT) $(SYSCALL_OUTPUT) $(MUKERNEL_C_OUTPUT) $(BUILD
 
 MUKERNEL_S_OUTPUT = obj/muKernel-s.o
 MUKERNEL_S_INPUT = src/muKernel.S
-MUKERNEL_S_CFLAGS = -march=rv32i_zicsr_zifencei -mabi=ilp32 -mstrict-align -mpreferred-stack-boundary=3 -nostartfiles -Wall -Wl,--build-i=none
+MUKERNEL_S_CFLAGS = -march=rv32i_zicsr_zifencei -mabi=ilp32 -mstrict-align -mpreferred-stack-boundary=3 -nostartfiles -Wall -Wl,--build-i=none 
 
 SYSCALL_OUTPUT = obj/syscall.obj
 SYSCALL_INPUT = src/syscall.S
-SYSCALL_CFLAGS = -march=rv32i_zicsr_zifencei -mabi=ilp32 -mstrict-align -mpreferred-stack-boundary=3 -nostartfiles -Wall -Wl,--build-i=none
+SYSCALL_CFLAGS = -march=rv32i_zicsr_zifencei -mabi=ilp32 -mstrict-align -mpreferred-stack-boundary=3 -nostartfiles -Wall -Wl,--build-i=none 
 
 MUKERNEL_C_OUTPUT = obj/muKernel.o
 MUKERNEL_C_INPUT = src/muKernel.c
 
 DFLAGS = -D -Mnumeric,no-aliases
-CFLAGS = -march=rv32im_zicsr_zifencei -mabi=ilp32 -mstrict-align -mpreferred-stack-boundary=3 -nostartfiles -Wall -Wl,--build-i=none
+CFLAGS = -march=rv32im_zicsr_zifencei -mabi=ilp32 -mstrict-align -mpreferred-stack-boundary=3 -nostartfiles -Wall -Wl,--build-i=none 
 LFLAGS = -T link.ld
 
 %:

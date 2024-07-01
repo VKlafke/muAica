@@ -12,7 +12,7 @@ entity PulseExtender is
 end PulseExtender;
 
 architecture Behavioral of PulseExtender is
-    constant PULSE_WIDTH : natural := 10;  -- Number of cycles to extend the pulse
+    constant PULSE_WIDTH : natural := 100;  -- Number of cycles to extend the pulse
     signal counter : unsigned(3 downto 0); -- 4-bit counter for up to 16 cycles
     signal pulse_active : std_logic := '0';
 begin

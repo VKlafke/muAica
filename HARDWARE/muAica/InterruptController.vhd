@@ -95,7 +95,7 @@ begin
     intr <= not idle;
     
     data_out <= "00000" & highPriorityReq when address = IRQ_ID_ADDR and ce = '1' and rw = '0' else
-            mask when address = MASK_ADDR and ce = '1' and rw = '0' else
-            (others=>'Z');
+            mask; --when address = MASK_ADDR and ce = '1' and rw = '0' else
+            --(others=>'0');
         
 end Behavioral;

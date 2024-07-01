@@ -1,9 +1,7 @@
-STACK_SIZE = 0x200;         /* Stack size in bytes */
-
 MEMORY
 {
-  INSTRUCTION_MEMORY : ORIGIN = 0x00000000, LENGTH = 7K
-  DATA_MEMORY        : ORIGIN = 0x00000000, LENGTH = 1K
+  INSTRUCTION_MEMORY : ORIGIN = 0x00000000, LENGTH = 10K
+  DATA_MEMORY        : ORIGIN = 0x00000000, LENGTH = 2048
 }
 
 
@@ -24,8 +22,8 @@ SECTIONS
         *(.bss*)            /* Input object files section */
         *(.sbss*)
     } > DATA_MEMORY
-    
-     . = (. + STACK_SIZE);  /* STACK_SIZE/4 words of stack memory */
-    . = ALIGN(4);           /* Ensure the _stack_ptr alignment upward to a 4 byte boundary */
-    _stack_ptr = .;         /* Set the stack pointer address */  
+      
+    /* Set the stack pointer to the last address of the DATA_MEMORY */
+  _stack_ptr = ORIGIN(DATA_MEMORY) + LENGTH(DATA_MEMORY) - 4;
+   
 }

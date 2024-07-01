@@ -85,6 +85,10 @@ begin
 				target_count_a <= base_clock_reg;
                 target_count_b <= timer_val_reg;
 			end if;
+
+            if intr_sig = '1' then 
+                enable_reg <= '0';
+            end if;
 			
         end if;
     end process;

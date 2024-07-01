@@ -4,16 +4,23 @@
 #include "muKernel.h"
 #include "syscall.h"
 
+char recvStr[256];
+int recvStrCnt = 0;
+
 volatile char* tempStr;
 volatile int strCnt;
+
+// Declare the ISR symbols defined in muKernel.S
+// so we can use their address when setting the ISR 
+extern void trap_entry(void);
+extern void kernel_trap_entry(void);
 
 // Vector that hold the callbacks for external interrupts
 // these can be set by the user through ExtIntrHandlerSet(int, callback_t)
 callback_t vec_Ext_Intr_Handler[MAX_EXT_INTR] = 
 {
-    NULL,
-    NULL,    
-    //KernelRXCallback,
+    KernelRXCallback, // RX 
+    NULL, // TIMER_0
     NULL,
     NULL,
     NULL,
@@ -46,6 +53,7 @@ void HexToAscii(int num, char* dest)
     }
 }
 
+/*
 struct stStackFrame
 {
     int ra; // x1, return addr
@@ -82,12 +90,23 @@ struct stStackFrame
     int t4; // x29: Temporary
     int t5; // x30: Temporary
     int t6;    // x31: Temporary
-};
+};*/
 
-// Main trap handler 
-// Deals with exceptions or calls ext intr dispatcher
-int TrapHandler(int mcause, int mepc, int ecallFunc, int a0, int a1, int a2, unsigned int* userStack) 
-{                                                                                                                
+
+// Main, USER MODE trap handler 
+// Deals with exceptions or calls the external intr dispatcher for hardware interrupts
+int KernelTrapHandler(int mcause, int mepc, int ecallFunc, int a0, int a1, int a2, unsigned int* userStack) 
+{                          
+    char strHex[64];
+    
+    KernelUARTTX("KernelTrapHandler mcause: ");
+    HexToAscii(mcause, strHex);
+    KernelUARTTX(strHex);
+    KernelUARTTX(" mepc: ");
+    HexToAscii(mepc, strHex);
+    KernelUARTTX(strHex);
+    KernelUARTTX("\n");
+                                                                                      
     if (mcause >= 0) 
 	{ // System calls and exceptions
 		
@@ -95,7 +114,8 @@ int TrapHandler(int mcause, int mepc, int ecallFunc, int a0, int a1, int a2, uns
 		{
 			// Treat exception
 			// ....
-			
+                
+            /*
 			// DEBUG STRING, SIMULATION ONLY
 			__asm__ volatile 
 			("li	x24,'E'\n\t" \
@@ -105,10 +125,17 @@ int TrapHandler(int mcause, int mepc, int ecallFunc, int a0, int a1, int a2, uns
 			 "li 	x28,'P'\n\t" \
 			 "li 	x29,'T'\n\t" \
 			 "li 	x30,'_'\n\t" \
-			 "li 	x31,'1'\n\t");
+			 "li 	x31,'1'\n\t");*/
              
-             KernelUARTTX("EXCEPTION: Misaligned instruction addr\n");
-			 
+            KernelUARTTX("[EX_MISALIGNED_INSTRUCTION_ADDR]: mepc: ");
+                
+            char buf[64]; 
+                
+            HexToAscii(mepc, buf);
+            buf[8] = '\n';
+                
+            KernelUARTTX(buf);
+              
 			// Will get stuck on loop entering exception
 			return mepc; 	
 		}
@@ -117,6 +144,7 @@ int TrapHandler(int mcause, int mepc, int ecallFunc, int a0, int a1, int a2, uns
 			// Treat exception
 			// ....
 			
+            /*
 			// DEBUG STRING, SIMULATION ONLY
 			__asm__ volatile 
 			("li	x24,'E'\n\t" \
@@ -126,7 +154,7 @@ int TrapHandler(int mcause, int mepc, int ecallFunc, int a0, int a1, int a2, uns
 			 "li 	x28,'P'\n\t" \
 			 "li 	x29,'T'\n\t" \
 			 "li 	x30,'_'\n\t" \
-			 "li 	x31,'2'\n\t");
+			 "li 	x31,'2'\n\t");*/
             
             int instAddr = 0x90000000 | mepc;
             
@@ -140,7 +168,7 @@ int TrapHandler(int mcause, int mepc, int ecallFunc, int a0, int a1, int a2, uns
             
             // reaproveitar multiplicação / divisão em instruções diferentes
             // VERIFICAR existencia de overflow em mul 
-     
+            
             // regular multiplication, returns low 32 bits of result 
             if(OPTypeM == MATCH_MUL)
             {
@@ -257,8 +285,8 @@ int TrapHandler(int mcause, int mepc, int ecallFunc, int a0, int a1, int a2, uns
                 int divisor  = rs2;
                 int rem = 0;
                 
-                // Do the division 
-                int result = KernelDIV(dividend, divisor, &rem);
+                // Do the division, but we only need the remainder.
+                KernelDIV(dividend, divisor, &rem);
                 
                 userStack[rd] = rem;
                 
@@ -268,19 +296,33 @@ int TrapHandler(int mcause, int mepc, int ecallFunc, int a0, int a1, int a2, uns
             { // remainder of unsigned-unsigned div op 
                                  
                 // Fetch data from registers pointed by instruction 
-                int dividend = rs1;
-                int divisor  = rs2;
-                int rem = 0;
+                uint32_t dividend = (uint32_t)rs1;
+                uint32_t divisor  = (uint32_t)rs2;
+                uint32_t rem = 0;
                 
-                // Do the division 
-                int result = KernelDIVU(dividend, divisor, &rem);
+                // Do the division, but we only need the remainder.
+                KernelDIVU(dividend, divisor, &rem);
                 
                 userStack[rd] = rem;
                 
                 return mepc + 4; // done, resume at epc+4           
             }
             else
-                KernelUARTTX("EXCEPTION: ILLEGAL INSTRUCTION\n");
+            {
+                KernelUARTTX("[EX_ILLEGAL_INSTRUCTION]: ");
+                
+                char buf[64]; 
+                
+                HexToAscii(mepc, buf);
+                buf[8] = '\n';
+                
+                KernelUARTTX(buf);
+                
+                HexToAscii(inst, buf);
+                buf[8] = '\n';
+                
+                KernelUARTTX(buf);
+            }
              
 			 
 			// Skip illegal instruction on return 
@@ -288,46 +330,14 @@ int TrapHandler(int mcause, int mepc, int ecallFunc, int a0, int a1, int a2, uns
 		}
 		else if(mcause == EX_MISALIGNED_DATA_ADDR)
 		{		
-		
-			// DEBUG STRING, SIMULATION ONLY
-			__asm__ volatile 
-			("li	x24,'E'\n\t" \
-			 "li	x25,'X'\n\t" \
-			 "li 	x26,'C'\n\t" \
-			 "li	x27, 'E'\n\t" \
-			 "li 	x28,'P'\n\t" \
-			 "li 	x29,'T'\n\t" \
-			 "li 	x30,'_'\n\t" \
-			 "li 	x31,'4'\n\t");
-             
-             KernelUARTTX("EXCEPTION: Misaligned data addr: ");
-             
-             
-            char bytes[30];
-             
-            bytes[0] = (unsigned char)(((mepc >> 28) & 0xF) + 0x41);
-            bytes[1] = '_';
-            bytes[2] = (unsigned char)(((mepc >> 24) & 0xF) + 0x41);
-            bytes[3] = '_';
-            bytes[4] = (unsigned char)(((mepc >> 20) & 0xF) + 0x41);
-            bytes[5] = '_';
-            bytes[6] = (unsigned char)(((mepc >> 16) & 0xF) + 0x41);
-            bytes[7] = '_';
-            bytes[8] = (unsigned char)(((mepc >> 12) & 0xF) + 0x41);
-            bytes[9] = '_';
-            bytes[10] = (unsigned char)(((mepc >> 8) & 0xF) + 0x41);
-            bytes[11] = '_';
-            bytes[12] = (unsigned char)(((mepc >> 4) & 0xF) + 0x41);
-            bytes[13] = '_';
-            bytes[14] = (unsigned char)((mepc & 0xF) + 0x41);
-			bytes[15] = '\n';
-            bytes[16] = '\0';
+            KernelUARTTX("[EX_MISALIGNED_DATA_ADDR]: mepc: ");
             
-            KernelUARTTX(bytes);
-            
-            
-             KernelUARTTX("EXCEPTION END STRING\n");
-             
+            char buf[32]; 
+            HexToAscii(mepc, buf);
+            buf[8] = '\n';
+                
+            KernelUARTTX(buf);
+         
 			// Will get stuck on loop entering exception  
 			return mepc;
 		}
@@ -358,10 +368,6 @@ int TrapHandler(int mcause, int mepc, int ecallFunc, int a0, int a1, int a2, uns
 					KernelPICMask(a0);
 				break;
 				
-				case ECALL_UART_TX: // Send string to tx 
-					KernelUARTTX((char*)a0);
-				break;
-				
                 case ECALL_TIMER_SET_CLK: // set timer base clock 
                     KernelTimerSetClock(a0);
                 break;
@@ -373,6 +379,14 @@ int TrapHandler(int mcause, int mepc, int ecallFunc, int a0, int a1, int a2, uns
                 case ECALL_TIMER_ENABLE: // enable / disable timer
                     KernelTimerSetEnabled(a0);
                 break;
+                
+				case ECALL_UART_TX: // Send string to tx 
+					KernelUARTTX((char*)a0);
+				break;
+                
+				case ECALL_UART_RX: // Read byte from rx
+					retVal = KernelRXRead(a0);
+				break;
                 
 				default:
 				break;			
@@ -387,7 +401,7 @@ int TrapHandler(int mcause, int mepc, int ecallFunc, int a0, int a1, int a2, uns
 				: "r" (retVal)      
 				: "a1"          
 			);
-			
+            
 			// DEBUG STRING, SIMULATION ONLY
 			/*__asm__ volatile 
 			("li	x24,'E'\n\t" \
@@ -419,9 +433,17 @@ int TrapHandler(int mcause, int mepc, int ecallFunc, int a0, int a1, int a2, uns
 			:
 			: "r"(_val_)
 		);
+        
+        // Change stvec to point to kernel mode ISR
+        w_stvec((uint32_t)kernel_trap_entry);
 			
 		// Call appropriate intr handler 
 		KernelExtIntrDispatcher();
+        
+        // Change stvec to point to user mode ISR 
+        w_stvec((uint32_t)trap_entry);
+        
+        KernelUARTTX("Restoring mstatus and mie\n");
 	
 		// Restore mstatus and mie 
 		__asm__ volatile
@@ -432,10 +454,328 @@ int TrapHandler(int mcause, int mepc, int ecallFunc, int a0, int a1, int a2, uns
 			: "r"(_mstatus_), "r"(_val_)
 		);
 			
-		
+        char strHex[64];
+        
+        HexToAscii(mepc, strHex) ;
+        
+        KernelUARTTX("Return to mepc: "); 
+        KernelUARTTX(strHex);
+        KernelUARTTX("\n");
+        
         return mepc;
     }        
                                                                                                       
+}
+
+
+// KERNEL MODE trap handler 
+// Deals with software exceptions that may occur while in kernel mode 
+int KernelTrapReentryHandler(int mcause, int mepc, int ecallFunc, int a0, int a1, int a2, unsigned int* userStack) 
+{
+      char strHex[64];
+    
+    KernelUARTTX("KernelTrapReentryHandler mcause: ");
+    HexToAscii(mcause, strHex);
+    KernelUARTTX(strHex);
+    KernelUARTTX(" mepc: ");
+    HexToAscii(mepc, strHex);
+    KernelUARTTX(strHex);
+    KernelUARTTX("\n");
+                                                                                      
+    if (mcause >= 0) 
+	{ // System calls and exceptions
+		
+        if(mcause == EX_MISALIGNED_INSTRUCTION_ADDR)
+		{
+			// Treat exception
+			// ....
+                             
+            KernelUARTTX("[KernelTrapReentryHandler] [EX_MISALIGNED_INSTRUCTION_ADDR]: mepc: ");
+                
+            char buf[64]; 
+                
+            HexToAscii(mepc, buf);
+            buf[8] = '\n';
+                
+            KernelUARTTX(buf);
+              
+			// Will get stuck on loop entering exception
+			return mepc; 	
+		}
+		else if(mcause == EX_ILLEGAL_INSTRUCTION)
+		{
+			// Treat exception
+			// ....
+			
+            int instAddr = 0x90000000 | mepc;
+            
+            int inst = *((int*)instAddr); // fetch inst
+            
+            int rs1 = 0;
+            int rs2 = 0;
+            int rd = 0;
+            
+            int OPTypeM = KernelDecodeMInstruction(inst, &rs1, &rs2, &rd, userStack);
+            
+            // reaproveitar multiplicação / divisão em instruções diferentes
+            // VERIFICAR existencia de overflow em mul 
+            
+            // regular multiplication, returns low 32 bits of result 
+            if(OPTypeM == MATCH_MUL)
+            {
+                int sum = 0;
+                                
+                // If any of the numbers to be multiplied is zero, skip mul 
+                if(rs1 != 0 && rs2 != 0)
+                {
+                    sum = KernelMUL(rs1, rs2);
+                }                
+                
+                // Store result in user stack 
+                userStack[rd] = sum;
+           
+                return mepc + 4; // done, resume at epc+4 
+            }
+            else if(OPTypeM == MATCH_MULH)
+            { // signed - signed mul, return high 32 bits 
+                
+                int sum = 0;
+                                
+                // If any of the numbers to be multiplied is zero, skip mul 
+                if(rs1 != 0 && rs2 != 0)
+                {
+                    sum = KernelMULH(rs1, rs2);
+                }                
+                
+                // Store result in user stack 
+                userStack[rd] = sum;
+           
+                return mepc + 4; // done, resume at epc+4        
+            }
+            else if(OPTypeM == MATCH_MULHSU)
+            { // signed - unsigned mul, return high 32 bits 
+                
+                int sum = 0;
+                                
+                // If any of the numbers to be multiplied is zero, skip mul 
+                if(rs1 != 0 && rs2 != 0)
+                {
+                    sum = KernelMULHSU(rs1, rs2);
+                }                
+                
+                // Store result in user stack 
+                userStack[rd] = sum;
+           
+                return mepc + 4; // done, resume at epc+4        
+            }
+            else if(OPTypeM == MATCH_MULHU)
+            { // unsigned - unsigned mul, return high 32 bits 
+                
+                int sum = 0;
+                                
+                // If any of the numbers to be multiplied is zero, skip mul 
+                if(rs1 != 0 && rs2 != 0)
+                {
+                    sum = KernelMULHU(rs1, rs2);
+                }                
+                
+                // Store result in user stack 
+                userStack[rd] = sum;
+           
+                return mepc + 4; // done, resume at epc+4        
+            }
+            else if(OPTypeM == MATCH_DIV)
+            { // signed - signed div 
+                
+                // If dividend is 0, skip operation and return 0
+                if(rs1 == 0)
+                {
+                    userStack[rd] = 0;
+                    
+                    return mepc + 4;
+                }
+                            
+                // Fetch data from registers pointed by instruction 
+                int dividend = rs1;
+                int divisor  = rs2;
+                
+                // Do the division 
+                int result = KernelDIV(dividend, divisor, NULL);
+                
+                userStack[rd] = result;
+              
+                return mepc + 4; // done, resume at epc+4           
+            }
+            else if(OPTypeM == MATCH_DIVU)
+            { // unsigned - unsigned div 
+                
+                // If dividend is 0, skip operation and return 0
+                if(rs1 == 0)
+                {
+                    userStack[rd] = 0;
+                    
+                    return mepc + 4;
+                }
+                            
+                // Fetch data from registers pointed by instruction 
+                int dividend = rs1;
+                int divisor  = rs2;
+                
+                // Do the division 
+                int result = KernelDIVU(dividend, divisor, NULL);
+                
+                userStack[rd] = result;
+              
+                return mepc + 4; // done, resume at epc+4           
+            }
+            else if(OPTypeM == MATCH_REM)
+            { // remainder of signed-signed div op 
+                                 
+                // Fetch data from registers pointed by instruction 
+                int dividend = rs1;
+                int divisor  = rs2;
+                int rem = 0;
+                
+                // Do the division, but we only need the remainder.
+                KernelDIV(dividend, divisor, &rem);
+                
+                userStack[rd] = rem;
+                
+                return mepc + 4; // done, resume at epc+4           
+            }
+            else if(OPTypeM == MATCH_REMU)
+            { // remainder of unsigned-unsigned div op 
+                                 
+                // Fetch data from registers pointed by instruction 
+                uint32_t dividend = (uint32_t)rs1;
+                uint32_t divisor  = (uint32_t)rs2;
+                uint32_t rem = 0;
+                
+                // Do the division, but we only need the remainder.
+                KernelDIVU(dividend, divisor, &rem);
+                
+                userStack[rd] = rem;
+                
+                return mepc + 4; // done, resume at epc+4           
+            }
+            else
+            {
+                KernelUARTTX("[KernelTrapReentryHandler] [EX_ILLEGAL_INSTRUCTION]: ");
+                
+                char buf[64]; 
+                
+                HexToAscii(mepc, buf);
+                buf[8] = '\n';
+                
+                KernelUARTTX(buf);
+                
+                HexToAscii(inst, buf);
+                buf[8] = '\n';
+                
+                KernelUARTTX(buf);
+            }
+             
+			 
+			// Skip illegal instruction on return 
+			return mepc + 4; 	
+		}
+		else if(mcause == EX_MISALIGNED_DATA_ADDR)
+		{	
+            KernelUARTTX("[EX_MISALIGNED_DATA_ADDR]: mepc: ");
+            
+            char buf[32]; 
+            HexToAscii(mepc, buf);
+            buf[8] = '\n';
+                
+            KernelUARTTX(buf);
+         
+			// Will get stuck on loop entering exception  
+			return mepc;
+		}
+		else if(mcause == EX_ECALL)
+		{
+			int retVal = 0;
+			
+			// Do the system call 		
+			switch(ecallFunc)
+			{				
+				case ECALL_EXT_INTR_REG: // Register ext intr handler 
+					KernelExtIntrHandlerSet(a0, (callback_t)a1);
+				break;
+				
+				case ECALL_BDP_CFG:	// BDPort config
+					KernelBDPortSetup(a0, a1, a2);
+				break;
+				
+				case ECALL_BDP_READ: // BDPort read
+					retVal = KernelBDPortRead();
+				break;
+				
+				case ECALL_BDP_WRITE: // BDPort write 
+					KernelBDPortWrite(a0);
+				break;
+				
+				case ECALL_PIC_MASK: // Set PIC intr mask 
+					KernelPICMask(a0);
+				break;
+				
+                case ECALL_TIMER_SET_CLK: // set timer base clock 
+                    KernelTimerSetClock(a0);
+                break;
+                
+                case ECALL_TIMER_SET_COUNT: // Set timer count, ms
+                    KernelTimerSetCount(a0);
+                break;
+                
+                case ECALL_TIMER_ENABLE: // enable / disable timer
+                    KernelTimerSetEnabled(a0);
+                break;
+                
+				case ECALL_UART_TX: // Send string to tx 
+					KernelUARTTX((char*)a0);
+				break;
+                
+				case ECALL_UART_RX: // Read byte from rx
+					retVal = KernelRXRead(a0);
+				break;
+                
+				default:
+				break;			
+			}
+			
+			
+			// Put retval in register a1 (a0 is return to mepc)			
+			__asm__ volatile
+			(
+				"mv a1, %0\n\t" 
+				:
+				: "r" (retVal)      
+				: "a1"          
+			);
+            
+			// DEBUG STRING, SIMULATION ONLY
+			/*__asm__ volatile 
+			("li	x24,'E'\n\t" \
+			 "li	x25,'C'\n\t" \
+			 "li 	x26,'A'\n\t" \
+			 "li	x27, 'L'\n\t" \
+			 "li 	x28,'L'\n\t" \
+			 "li 	x29,'_'\n\t" \
+			 "mv 	x30,%0\n\t" \
+			 "li 	x31,''\n\t"
+			 :
+			 : "r"(ecallFunc)
+			 );		*/
+		}
+		
+        return mepc + 4; // Return execution at the next inst 
+    }
+    else 
+	{   
+        KernelUARTTX("[KernelTrapReentryHandler] Error, received INTR request!\n"); 
+        
+        return mepc;
+    }          
 }
 
 
@@ -461,17 +801,36 @@ void KernelExtIntrDispatcher()
 	 "li	x29,'R'\n\t" \
 	 "li 	x30,'_'\n\t");*/
 
+
+    KernelUARTTX("Intr dispatcher start\n");
+
 	// Treat IRQ based on ID	
 	if(IRQ_ID >= 0 && IRQ_ID < MAX_EXT_INTR)
 	{
 		if(vec_Ext_Intr_Handler[IRQ_ID] != 0)
+        {
+            char strHex[32];
+            
+            KernelUARTTX("INTR Dispatcher: ");
+            HexToAscii(IRQ_ID, strHex), 
+            KernelUARTTX(strHex);
+            KernelUARTTX("\n");
+            
 			vec_Ext_Intr_Handler[IRQ_ID]();
+            
+            
+            KernelUARTTX("INTR Dispatcher RETURN\n");
+            
+        }
 		else 
 			KernelExtIntrDefault(IRQ_ID); // default handler when there is no assigned callback 
 	}
 	
 	// Notify PIC that IRQ was treated
 	PIC_ACK = IRQ_ID;
+    
+    
+    KernelUARTTX("Intr dispatcher end\n");
 }
 
 // Register external intr handler callbacks from user 
@@ -495,7 +854,7 @@ int KernelExtIntrHandlerSet(int n, callback_t handler_callback)
 void KernelExtIntrDefault(int irqID)
 {
 	// DEBUG SIMULATION
-    __asm__ volatile 
+   /* __asm__ volatile 
 	("li	x24,''\n\t" \
 	 "li	x25,'I'\n\t" \
 	 "li 	x26,'N'\n\t" \
@@ -503,16 +862,17 @@ void KernelExtIntrDefault(int irqID)
 	 "li 	x28,'R'\n\t" \
 	 "li 	x29,'_'\n\t" \
 	 "li 	x30,'D'\n\t"
-	);
+	);*/
     
-    /*KernelUARTTX("Default INTR callback: ");
+    // Mensagem "CALLBACK %d NÃO REGISTRADO"  
+    KernelUARTTX("Default INTR callback: ");
 	char valText[3]; 
 	
 	valText[0] = irqID + 0x30;
 	valText[1] = '\n';
     valText[2] = '\0';
     
-	//KernelUARTTX(valText);*/
+	KernelUARTTX(valText);
 }
 
 							//
@@ -529,11 +889,10 @@ void KernelExtIntrDefault(int irqID)
 // Set up BD port registers
 // Config: Bit is input / output
 // Enable: Bit is enabled
-// 	 Intr: Bit is interruption (only bits 31 - 24)
+// 	 Intr: Bit is interruption (only bits 31 - 26)
 void KernelBDPortSetup(int config, int enable, int intr)
 {
 	BDPORT_CFG = config;
-	//BDPORT_INTR = 0;
 	BDPORT_EN = enable;
 	BDPORT_INTR = intr;
 }
@@ -597,9 +956,29 @@ void KernelUARTTX(char* str)
 
 
 // Get data from RX 
-char KernelRXRead()
+char KernelRXRead(int pooling)
 {
+    if(pooling == 1)
+    {
+        while(UART_RX_DV == 0);
+        
+        return UART_RX;
+    }
+    
     return UART_RX;
+}
+
+void KernelRXCallback()
+{
+    char recvByte = UART_RX;
+    
+    recvStr[recvStrCnt++] = recvByte;
+    
+    
+    KernelUARTTX("RX Callback: ");
+    KernelUARTTX(recvByte);
+    KernelUARTTX("\n");
+    
 }
 
 							//
@@ -949,6 +1328,45 @@ int KernelDecodeMInstruction(int instruction, int* outRs1, int* outRs2, int* out
 //
 //	Helper functions
 //
+
+/*
+static void HexToAscii(int num, char* dest) 
+{
+    // Start from the end of the buffer, leaving space for the null terminator
+    dest[8] = '\0';
+
+    for (int i = 7; i >= 0; i--) {
+        // Extract the lowest 4 bits (one hex digit)
+        int hexDigit = num & 0xF;
+        
+        // Convert the hex digit to its ASCII representation
+        if (hexDigit >= 0 && hexDigit <= 9) {
+            // '0' to '9'
+            dest[i] = '0' + hexDigit;
+        } else {
+            // 'A' to 'F'
+            dest[i] = 'A' + (hexDigit - 10);
+        }
+
+        // Shift the number to get the next hex digit in the next iteration
+        num >>= 4;
+    }
+}
+
+void ByteToAsciiHex(unsigned char byte, char* dest) 
+{
+    // Convert the high 4 bits to ASCII hex
+    int high = (byte >> 4) & 0xF;
+    dest[0] = (high <= 9) ? ('0' + high) : ('A' + (high - 10));
+
+    // Convert the low 4 bits to ASCII hex
+    int low = byte & 0xF;
+    dest[1] = (low <= 9) ? ('0' + low) : ('A' + (low - 10));
+
+    // Null-terminate the string
+    dest[2] = '\0';
+}*/
+
 /*
 // Converts an integer to a string and appends it to the buffer.
 // Returns the number of characters written.

@@ -1,128 +1,82 @@
 #include "muAica.h"
+#include "muLib.h"
 #include <stdarg.h>
 #include <stdio.h>
 
-volatile int global_Vector[12] = {0, 0, 0};
-volatile int testGlobal = 123;
+char strBuf[128];
 
-// Converts an integer to a string and appends it to the buffer.
-// Returns the number of characters written.
-int muIntToString(char* buf, int value) 
+char recvStr[128];
+int recvStrCnt = 0;
+    
+void RXCallback()
 {
-	char temp[32]; // Temporary buffer to hold the integer characters in reverse order
-	int i = 0, j, len = 0;
-	int isNegative = value < 0;
-
-	if (isNegative) 
-	{
-		value = -value; // Make the value positive for processing
-	}
-
-	// Extract digits
-	do 
-	{
-		temp[i++] = (value % 10) + '0'; // Convert integer to character
-		value /= 10;
-	} while (value);
-
-	if (isNegative) 
-	{
-		temp[i++] = '-';
-	}
-
-	len = i;
-	// Reverse the string into the output buffer
-	for (j = 0; j < len; j++) 
-	{
-		buf[j] = temp[len - 1 - j];
-	}
-	buf[len] = '\0'; // Null-terminate the string
-
-	return len; // Return the length of the string, excluding the null terminator
+   // char recvByte = UARTRead(0);
+    
+    //recvStr[recvStrCnt++] = recvByte;
+    
+    //muSprintf(strBuf, "RX Callback: %c\n", recvByte);
+    
+    UARTPrint("USER RX CALLBACK\n");
+    
 }
 
-// Copies the source string into the destination buffer.
-// Returns the number of characters copied (excluding the null terminator).
-int muStrcpy(char* dest, const char* src) 
-{
-	int count = 0;
-	while (*src) 
-	{
-		*dest++ = *src++;
-		count++;
-	}
-	*dest = '\0'; // Null-terminate the destination string
-
-	return count;
-}
-
-// Scans string for formatters (%d / %s / %%) and replaces them with data from 
-// argument list
-void muSprintf(char* buf, const char* format, ...) 
-{
-	va_list args;
-	va_start(args, format);
-
-	const char* p = format;
-	char* buf_ptr = buf;
-	while (*p) 
-	{
-		if (*p == '%') 
-		{
-			switch (*++p) 
-			{ // Move to the specifier character
-			case 'd': 
-			{ // Integer
-				int i = va_arg(args, int);
-				buf_ptr += muIntToString(buf_ptr, i);
-				break;
-			}
-			case 's': 
-			{ // String
-				char* s = va_arg(args, char*);
-				buf_ptr += muStrcpy(buf_ptr, s);
-				break;
-			}
-			case '%': 
-			{ // Percent sign
-				*buf_ptr++ = '%';
-				break;
-			}
-			default: // Unsupported format
-				*buf_ptr++ = '%';
-				*buf_ptr++ = *p;
-				break;
-			}
-		}
-		else 
-		{
-			*buf_ptr++ = *p; // Copy regular character
-		}
-		p++;
-	}
-
-	*buf_ptr = '\0'; // Null-terminate the buffer
-	va_end(args);
-}
-
-
+#define PIC_IRQ_ID  (*((volatile char*) 0x80001000))
+#define PIC_ACK     (*((volatile char*) 0x80001010))
+#define PIC_MASK    (*((volatile char*) 0x80001020))
 
 int main()
-{	    
-    int b = 10;
-    int c = 12;
-    char buf[128];
+{
+	/*int IRQ_ID = PIC_IRQ_ID;
+	int MASK = PIC_MASK;
     
-    for(int i = 1; i < 30; i++)
+    char strBuf[128];
+    muSprintf(strBuf, "%d %d\n", IRQ_ID, MASK);
+    UARTPrint(strBuf);
+    
+    PIC_ACK = IRQ_ID;
+    
+    IRQ_ID = PIC_IRQ_ID;
+   
+    muSprintf(strBuf, "%d\n", IRQ_ID);
+    UARTPrint(strBuf);*/
+   
+    // Register callback for RX 
+    ExtIntrRegisterCallback(0, RXCallback);
+   
+    UARTPrint("Callback registered \n");
+
+    // Enable RX callback only
+    //PICMask(0x0);
+    
+    PICMask(0x1);
+    
+    UARTPrint("PIC mask ok\n");
+    
+   
+    int i = 0;
+    
+    while(1)
     {
-       b /= i;
-       c *= i;
-       
-       muSprintf(buf, "[%d] %d %d\n", i, b, c);
-       
-       UART_Print(buf); 
-       
-    }
+        i++;
         
-	return b;
+        if(i > 50000)
+        {
+            i = 0;
+            
+            UARTPrint("i reset\n");
+        }
+    }
+    
+    UARTPrint("Something went wrong...\n");
+    
+    /*
+    while(1)
+    {
+        char test = UARTRead(1);
+        
+        muSprintf(strBuf, "%c", test);
+        UARTPrint(strBuf);
+    }*/
+    
+    return 0;
 }

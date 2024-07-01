@@ -24,7 +24,7 @@ end entity stage2_ID;
 
 architecture behavior of stage2_ID is
 
-  type CodeRegion is (BOOTLOADER, TRAP_ENTRY, ECALLS, TRAP_HANDLER, K_EINTR_DISP, K_EINTR_HS, K_EINTR_DEF, K_BDPORT_S, K_UART_TX, K_RX_CALLBACK, ASCII_2_INT, MAIN, USER, OTHER);
+  type CodeRegion is (BOOTLOADER, TRAP_ENTRY, K_TRAP_ENTRY, W_STVEC, HEX2ASCII, TRAP_HANDLER, TRAP_REENTRY, KERNEL_FUNC, K_RX_CALLBACK, KERNEL_FUNC2, KERNEL_M_EXT, K_BDPORT_S, K_UART_TX, K_UART_RX, ASCII_2_INT, MAIN, USER, OTHER);
 
   signal codeRegion_s : CodeRegion;
 
@@ -84,17 +84,22 @@ begin
 
   codeRegion_s <= BOOTLOADER    when (unsigned(ifid.pc) < to_unsigned(7, ifid.pc'length)) else
                   TRAP_ENTRY    when (unsigned(ifid.pc) >= to_unsigned(7, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(85, ifid.pc'length)) else 
-                  ECALLS        when (unsigned(ifid.pc) >= to_unsigned(86, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(113, ifid.pc'length)) else 
-                  TRAP_HANDLER  when (unsigned(ifid.pc) >= to_unsigned(165, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(505, ifid.pc'length)) else 
-                 -- K_EINTR_DISP  when (unsigned(ifid.pc) >= to_unsigned(329, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(366, ifid.pc'length)) else 
+                  K_TRAP_ENTRY  when (unsigned(ifid.pc) >= to_unsigned(86, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(161, ifid.pc'length)) else 
+                  W_STVEC       when (unsigned(ifid.pc) >= to_unsigned(162, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(171, ifid.pc'length)) else 
+                  HEX2ASCII    when (unsigned(ifid.pc) >= to_unsigned(172, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(220, ifid.pc'length)) else 
+                  TRAP_HANDLER  when (unsigned(ifid.pc) >= to_unsigned(221, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(637, ifid.pc'length)) else 
+                  TRAP_REENTRY  when (unsigned(ifid.pc) >= to_unsigned(638, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(1024, ifid.pc'length)) else 
+                  KERNEL_FUNC  when (unsigned(ifid.pc) >= to_unsigned(1025, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(1185, ifid.pc'length)) else 
                 -- K_EINTR_HS    when (unsigned(ifid.pc) >= to_unsigned(367, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(393, ifid.pc'length)) else 
                  -- K_EINTR_DEF   when (unsigned(ifid.pc) >= to_unsigned(394, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(408, ifid.pc'length)) else 
                  -- K_BDPORT_S    when (unsigned(ifid.pc) >= to_unsigned(409, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(429, ifid.pc'length)) else 
-                  K_UART_TX     when (unsigned(ifid.pc) >= to_unsigned(642, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(673, ifid.pc'length)) else 
-                 -- K_RX_CALLBACK when (unsigned(ifid.pc) >= to_unsigned(553, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(561, ifid.pc'length)) else 
-                 -- ASCII_2_INT   when (unsigned(ifid.pc) >= to_unsigned(562, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(614, ifid.pc'length)) else 
-                  MAIN          when (unsigned(ifid.pc) >= to_unsigned(1024, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(1207, ifid.pc'length)) else 
-                  USER          when (unsigned(ifid.pc) >= to_unsigned(1800, ifid.pc'length)) else 
+                  K_UART_TX     when (unsigned(ifid.pc) >= to_unsigned(1186, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(1217, ifid.pc'length)) else 
+                  K_UART_RX     when (unsigned(ifid.pc) >= to_unsigned(1218, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(1240, ifid.pc'length)) else 
+                  K_RX_CALLBACK    when (unsigned(ifid.pc) >= to_unsigned(1241, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(1266, ifid.pc'length)) else 
+                  KERNEL_FUNC2   when (unsigned(ifid.pc) >= to_unsigned(1267, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(1302, ifid.pc'length)) else 
+                  KERNEL_M_EXT   when (unsigned(ifid.pc) >= to_unsigned(930, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(1613, ifid.pc'length)) else 
+                  MAIN          when (unsigned(ifid.pc) >= to_unsigned(1987, ifid.pc'length) and unsigned(ifid.pc) <= to_unsigned(2156, ifid.pc'length)) else 
+                  USER          when (unsigned(ifid.pc) >= to_unsigned(2157, ifid.pc'length)) else 
                   OTHER; 
 
 ------------------------------------------------------------------------------

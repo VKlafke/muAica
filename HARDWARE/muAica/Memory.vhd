@@ -43,15 +43,20 @@ architecture behavioral of Memory is
         variable fileLine : line;
         variable memoryArray : Memory;
         variable data_str : string(1 to 8);
-		variable i : natural := 0;
+		variable i : integer := 0;
     begin   
         if imageFileName /= "UNUSED" then
             file_open(imageFile, imageFileName, READ_MODE);
-            while NOT (endfile(imageFile)) loop
-                readline (imageFile, fileLine);
-                read (fileLine, data_str);
-                memoryArray(i) := StringToStdLogicVector(data_str);
-				i := i + 1;
+            
+            for i in 1 to SIZE loop
+                if NOT (endfile(imageFile)) then
+                    readline (imageFile, fileLine);
+                    read (fileLine, data_str);
+                    memoryArray(i-1) := StringToStdLogicVector(data_str);
+                   -- i := i + 1;
+                 else
+                    exit;
+                 end if;
             end loop;
 			file_close(imageFile);
         end if;

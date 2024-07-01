@@ -13,7 +13,7 @@
 #define PIC_ACK     (*((volatile char*) 0x80001010))
 #define PIC_MASK    (*((volatile char*) 0x80001020))
 
-#define UART_TX		(*((volatile char*) 0x80002000))
+#define UART_TX		(*((volatile unsigned char*) 0x80002000))
 #define UART_RX		(*((volatile char*) 0x80003000))
 #define UART_RX_DV	(*((volatile char*) 0x80005000))
 
@@ -49,22 +49,35 @@
 enum Kernel_Trap_Codes
 {
 	EX_MISALIGNED_INSTRUCTION_ADDR = 1,
-	EX_ILLEGAL_INSTRUCTION, 
-    EX_MISALIGNED_DATA_ADDR = 4,
-    EX_ECALL = 8,
+	EX_ILLEGAL_INSTRUCTION         = 2, 
+    EX_MISALIGNED_DATA_ADDR        = 4,
+    EX_ECALL                       = 8,
 };
 
 // External callback reg issue codes
 enum Ext_Intr_Reg_Error_Codes
 {
-	N_OUT_OF_BOUNDS = 1,
-	INVALID_CALLBACK,
+	N_OUT_OF_BOUNDS    = 1,
+	INVALID_CALLBACK   = 2,
 };
-
-
 
 // External interrupt callback typedef 
 typedef void (*callback_t)();
+
+// CSR access functions 
+
+static inline uint32_t r_stvec()
+{
+  uint32_t x;
+  asm volatile("csrr %0, stvec" : "=r" (x) );
+  return x;
+}
+
+static inline void w_stvec(uint32_t x)
+{
+  asm volatile("csrw stvec, %0" : : "r" (x));
+}
+
 
 // Kernel functions
 
@@ -73,7 +86,7 @@ int main();
 
 // Handles the treatment of exceptions / interrupts.
 // Gets trap ID from mcause and calls the appropriate handler for it
-int TrapHandler(int mcause, int mepc, int ecallFunc, int a0, int a1, int a2, unsigned int* sp);
+int KernelTrapHandler(int mcause, int mepc, int ecallFunc, int a0, int a1, int a2, unsigned int* sp);
 
 
 ///////////////////////
@@ -135,7 +148,10 @@ void KernelUARTTX(char* str);
 
 
 // Get data from RX 
-char KernelRXRead();
+char KernelRXRead(int pooling);
+
+// Get full strings from RX, default callback
+void KernelRXCallback();
 
 //
 //////////////////////////

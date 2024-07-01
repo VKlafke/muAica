@@ -1,10 +1,9 @@
-STACK_SIZE = 0x300;         /* Stack size in bytes */
-
 MEMORY
 {
-  INSTRUCTION_MEMORY : ORIGIN = 0x00001c00, LENGTH = 5K
-  DATA_MEMORY        : ORIGIN = 0x00000400, LENGTH = 1K
+  INSTRUCTION_MEMORY : ORIGIN = 0x000021B4, LENGTH = 24140
+  DATA_MEMORY        : ORIGIN = 0x00000800, LENGTH = 14336
 }
+
 
 
 /* Executable object file sections */
@@ -18,6 +17,7 @@ SECTIONS
         *(.data*)           /* Input object files section */
         *(.sdata*)
         *(.rodata*)         /* .rodata, .rodata.str1.4 */
+        *(.srodata*)
     } > DATA_MEMORY AT > INSTRUCTION_MEMORY
     
     .bss : {                /* Output elf section */
@@ -25,7 +25,6 @@ SECTIONS
         *(.sbss*)
     } > DATA_MEMORY
     
-     . = (. + STACK_SIZE);  /* STACK_SIZE/4 words of stack memory */
-    . = ALIGN(4);           /* Ensure the _stack_ptr alignment upward to a 4 byte boundary */
-    _stack_ptr = .;         /* Set the stack pointer address */  
+    /* Set the stack pointer to the last address of the DATA_MEMORY */
+  _stack_ptr = ORIGIN(DATA_MEMORY) + LENGTH(DATA_MEMORY) - 4; 
 }

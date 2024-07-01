@@ -10,15 +10,11 @@ MAIN_SRC			= $(basename $(notdir $@))
 BUILD_OUTPUT 	= obj/$(addsuffix .o, $(MAIN_SRC))
 LINKER_OUTPUT 	= build/$(addsuffix .elf, $(MAIN_SRC))
 
-LINK_OBJs		= $(MUKERNEL_S_OUTPUT) $(SYSCALL_OUTPUT) $(MUKERNEL_C_OUTPUT) $(BUILD_OUTPUT)
+LINK_OBJs		= $(MUKERNEL_S_OUTPUT) $(MUKERNEL_C_OUTPUT) $(BUILD_OUTPUT)
 
 MUKERNEL_S_OUTPUT = obj/muKernel-s.o
 MUKERNEL_S_INPUT = src/muKernel.S
 MUKERNEL_S_CFLAGS = -march=rv32i_zicsr_zifencei -mabi=ilp32 -mstrict-align -mpreferred-stack-boundary=3 -nostartfiles -Wall -Wl,--build-i=none 
-
-SYSCALL_OUTPUT = obj/syscall.obj
-SYSCALL_INPUT = src/syscall.S
-SYSCALL_CFLAGS = -march=rv32i_zicsr_zifencei -mabi=ilp32 -mstrict-align -mpreferred-stack-boundary=3 -nostartfiles -Wall -Wl,--build-i=none 
 
 MUKERNEL_C_OUTPUT = obj/muKernel.o
 MUKERNEL_C_INPUT = src/muKernel.c
@@ -31,10 +27,6 @@ LFLAGS = -T link.ld
 	@echo
 	@echo Assembling $(MUKERNEL_S_INPUT)
 	$(CC_RISCV) -c $(MUKERNEL_S_INPUT) $(MUKERNEL_S_CFLAGS) -o $(MUKERNEL_S_OUTPUT)
-	
-	@echo
-	@echo Assembling $(SYSCALL_INPUT)
-	$(CC_RISCV) -c $(SYSCALL_INPUT) $(SYSCALL_CFLAGS) -o $(SYSCALL_OUTPUT)
 	
 	@echo
 	@echo Compiling $(MUKERNEL_C_INPUT)
@@ -66,6 +58,11 @@ LFLAGS = -T link.ld
 	@echo Generating data memory image...
 	$(OBJCOPY_RISCV) --dump-section .data=./build/data.bin ./build/$(addsuffix .elf, $(MAIN_SRC))
 	../bin2hex ./build/data.bin > ./out/data.txt 4096
+    
+	@echo
+	@echo Extracting and printing _stack_ptr value
+	@$(DUMP_RISCV) -t $(LINKER_OUTPUT) | grep _stack_ptr
+
 
 .PHONY: clean
 clean:

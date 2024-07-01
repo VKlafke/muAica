@@ -33,8 +33,8 @@ entity MemoryCtrl is
     wait_d       : out std_logic;
 	
   -- Interface with Data Memory / Peripherals
-	addr_data	  : out std_logic_vector(n-1 downto 0);
-	prph_reg_addr : out std_logic_vector(7 downto 0);
+	addr_data	 : out std_logic_vector(n-1 downto 0);
+	addr_prph	 : out std_logic_vector(7 downto 0);
     wbe    		 : out  std_logic_vector(3 downto 0);
 	data_out 	 : out  std_logic_vector(n-1 downto 0);
 	data_in 	 : in std_logic_vector(n-1 downto 0);
@@ -177,7 +177,7 @@ begin
 	-- Data coming in from core 
 	--
 		
-	data_sig <= core_ddata when (currentState = st_Mem_Exec OR currentState = st_Prph_Exec OR currentState = st_Mem_Wait) AND we = '1' else (others => 'Z');
+	data_sig <= core_ddata when (currentState = st_Mem_Exec OR currentState = st_Prph_Exec OR currentState = st_Mem_Wait) AND we = '1' else (others => '0');
 	
 	    -- Write enable to data memory
 	wbe_sig <= "0000" when (we = '0' OR rst = '1' OR currentState = st_Mem_Instr_Access) else
@@ -205,8 +205,8 @@ begin
 				
 	
 	-- Out to mem 
-	data_out <= data_out_sig when ((currentState = st_Mem_Exec OR currentState = st_Prph_Exec OR currentState = st_Mem_Wait) AND we = '1') else 
-				(others => 'Z');
+	data_out <= data_out_sig; --when ((currentState = st_Mem_Exec OR currentState = st_Prph_Exec OR currentState = st_Mem_Wait) AND we = '1') else 
+				--(others => '0');
 
 	wbe <= wbe_sig when currentState /= st_Mem_Wait else 
 			"0000";
@@ -217,15 +217,15 @@ begin
 
 
 	prph_en <= (core_daddr(31) AND  not core_daddr(28)) when (currentState = st_Idle AND valid_daddr = '1') else 
-					  (addr_data_reg(31) AND not addr_data_reg(28)) when currentState /= st_Idle; -- MSB of addr controls access to peripherals. 0: memory, 1: peripherals
+				(addr_data_reg(31) AND not addr_data_reg(28)); --when currentState /= st_Idle; -- MSB of addr controls access to peripherals. 0: memory, 1: peripherals
 
 	-- Used to address the peripheral being accessed
 	addr_p <= --core_daddr(19 downto 12) when ((valid_daddr = '1' AND we = '0') AND prph_en = '1') else 
 			  addr_data_reg(19 downto 12) when prph_en = '1' else
 			  (others => '0');
 
-	prph_reg_addr <= addr_data_reg(11 downto 4) when currentState = st_Prph_Exec else
-		         core_daddr(11 downto 4) when currentState = st_Idle AND valid_daddr = '1';
+	addr_prph <= addr_data_reg(11 downto 4) when currentState = st_Prph_Exec else
+		         core_daddr(11 downto 4); --when currentState = st_Idle AND valid_daddr = '1';
 
 	-- Data Memory enable
 	--ce_dm <= '1' when currentState = st_Load else 
@@ -271,7 +271,7 @@ begin
 														(currentState = st_Mem_Instr_Access AND core_daddr(31) = '0')) 
 														AND valid_daddr = '1') else 
 				 "00" & addr_data_reg(n-1 downto 2) when (currentState = st_Mem_Exec OR currentState = st_Mem_Wait) else 
-				 (others => 'Z'); 
+				 (others => '0'); 
 
 	wait_d <= '1' when wait_sig = '1' else 
 				'0';

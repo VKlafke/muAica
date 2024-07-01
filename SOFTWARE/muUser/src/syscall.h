@@ -16,7 +16,6 @@
 #define ECALL_PIC_MASK       13
 
 #define ECALL_UART_TX        14
-
-#define ECALL_SPRINTF        15
+#define ECALL_UART_RX        15
 
 #endif

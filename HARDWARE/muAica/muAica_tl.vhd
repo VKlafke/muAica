@@ -9,9 +9,10 @@ entity muAica_tl is
 		port_io : inout std_logic_vector(31 downto 0);
 		
 		tx		: out std_logic;
-		tx_active : out std_logic;
 		
-		rx		: in std_logic
+		rx		: in std_logic;
+        
+        test    : out std_logic
 	);
 end muAica_tl;
 
@@ -22,6 +23,8 @@ architecture behavioral of muAica_tl is
 	  
 	  signal tx_s	: std_logic;
 	  signal tx_a   : std_logic;
+	  signal rst_s : std_logic;
+      signal test_sig : std_logic;
 
 begin
 
@@ -38,15 +41,15 @@ begin
             rst_bt      => rst, 
             port_io 	=> port_io_sig,
 			tx		=> tx_s,
-			tx_active => tx_a,
 			rx		=> rx
         );  
 		
 	port_io <= port_io_sig;
 	
 	tx <= tx_s;
-	tx_active <= tx_a;
-	
+    
+    test <= test_sig;
+    
 	--port_io(3 downto 0) <= switch_in(3 downto 0);
 	--led_out <= port_io(31 downto 28);
     

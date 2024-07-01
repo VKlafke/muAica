@@ -50,7 +50,7 @@ end component;
   signal  core_daddr : std_logic_vector(n-1 downto 0);
   signal  core_ddata : std_logic_vector(n-1 downto 0);
   signal  addr_data : std_logic_vector(n-1 downto 0);
-  signal  prph_reg_addr : std_logic_vector(7 downto 0);
+  signal  addr_prph : std_logic_vector(7 downto 0);
   
   -- Instruction memory
   signal  inst_wbe       : std_logic_vector(3 downto 0);
@@ -182,8 +182,8 @@ begin
     wait_d  => wait_d,
 
 		-- Interface with data memory / peripherals
-		addr_data	    => addr_data,
-    prph_reg_addr => prph_reg_addr,
+		addr_data	=> addr_data,
+    addr_prph => addr_prph,
 		data_in		=> data_bus,
 		data_out	=> data_in, 
 		wbe    		=> wbe,
@@ -220,7 +220,7 @@ data_bus <=  x"000000" & data_o_RX_Buf        when rd_RX  = '1' else
       clk => clk, 
       rst => rst,
 
-      address => prph_reg_addr,
+      address => addr_prph,
       data_i  => data_i_bdP,
       data_o  => data_o_bdP,
 
@@ -246,7 +246,7 @@ data_bus <=  x"000000" & data_o_RX_Buf        when rd_RX  = '1' else
 		rst 	   => rst,			
 		data_in  => data_in(7 downto 0),
 		data_out => data_o_PIC,
-		address  => prph_reg_addr,
+		address  => addr_prph,
 		rw		   => we,
 		ce		   => ce_PIC,
 		intr 	   => intr_p,
@@ -318,7 +318,7 @@ data_bus <=  x"000000" & data_o_RX_Buf        when rd_RX  = '1' else
 		clk 	   => clk,
 		rst 	   => rst,		
     data_in  => data_in,
-    address  => prph_reg_addr,
+    address  => addr_prph,
     ce       => ce_Timer,
     intr     => timer_intr
   );
@@ -328,7 +328,7 @@ data_bus <=  x"000000" & data_o_RX_Buf        when rd_RX  = '1' else
 --
   INSTRUCTION_MEMORY: entity work.Memory(behavioral)
 	generic map (
-		SIZE            => 5120,                                  -- Memory depth 
+		SIZE            => 8192,                                  -- Memory depth 
 		ADDR_WIDTH		  => 32,
 		COL_WIDTH		    => 8,
 		NB_COL		    	=> 4,

@@ -3,8 +3,8 @@
 #ECALL stubs
 
 
-.global Ext_Intr_Register_Callback
-Ext_Intr_Register_Callback:
+.global ExtIntrRegisterCallback
+ExtIntrRegisterCallback:
 	li a7, ECALL_EXT_INTR_REG
 	ecall
 	ret
@@ -27,38 +27,38 @@ TimerSetEnabled:
 	ecall
 	ret
     
-.global BDPort_Setup
-BDPort_Setup:
+.global BDPortSetup
+BDPortSetup:
 	li a7, ECALL_BDP_CFG
 	ecall
 	ret
 							
-.global BDPort_Read
-BDPort_Read:
+.global BDPortRead
+BDPortRead:
 	li a7, ECALL_BDP_READ
 	ecall
 	ret
 							
-.global BDPort_Write
-BDPort_Write:
+.global BDPortWrite
+BDPortWrite:
 	li a7, ECALL_BDP_WRITE
 	ecall
 	ret
 				
-.global PIC_Mask
-PIC_Mask:
+.global PICMask
+PICMask:
 	li a7, ECALL_PIC_MASK
 	ecall
 	ret			
 				
-.global UART_Print
-UART_Print:
+.global UARTPrint
+UARTPrint:
 	li a7, ECALL_UART_TX
 	ecall
 	ret
     
-#.global MuSprintf
-#MuSprintf:
-    #li a7, ECALL_SPRINTF
-    #ecall
-    #ret
+.global UARTRead
+UARTRead:
+    li a7, ECALL_UART_RX
+    ecall
+    ret

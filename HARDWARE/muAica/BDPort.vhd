@@ -147,6 +147,7 @@ begin
 	
 	data_o <= PortData   when address = PORT_DATA_ADDR else
 			  PortConfig when address = PORT_CONFIG_ADDR else
+			  ITREnable  when address = PORT_ITR_ADDR else 
 			  PortEnable;
 			  
 	

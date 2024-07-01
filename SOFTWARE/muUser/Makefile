@@ -17,7 +17,7 @@ MAIN_SRC			= $(basename $(notdir $@))
 BUILD_OUTPUT 	= obj/$(addsuffix .o, $(MAIN_SRC))
 LINKER_OUTPUT 	= build/$(addsuffix .elf, $(MAIN_SRC))
 
-LINK_OBJs		=  $(BOOTLOADER_S_OUTPUT) $(SYSCALL_OUTPUT) $(BUILD_OUTPUT)
+LINK_OBJs		=  $(BOOTLOADER_S_OUTPUT) $(SYSCALL_OUTPUT) $(MULIB_OUTPUT) $(BUILD_OUTPUT)
 
 BOOTLOADER_S_OUTPUT = obj/bootloader.o
 BOOTLOADER_S_INPUT = src/bootloader.S
@@ -26,6 +26,10 @@ BOOTLOADER_S_CFLAGS = -march=rv32i_zicsr_zifencei -mabi=ilp32 -mstrict-align -mp
 SYSCALL_OUTPUT = obj/syscall.obj
 SYSCALL_INPUT = src/syscall.S
 SYSCALL_CFLAGS = -march=rv32i_zicsr_zifencei -mabi=ilp32 -mstrict-align -mpreferred-stack-boundary=3 -nostartfiles -Wall -Wl,--build-i=none
+
+MULIB_OUTPUT = obj/mulib.obj
+MULIB_INPUT = src/muLib.c
+MULIB_CFLAGS = -march=rv32im_zicsr_zifencei -mabi=ilp32 -mstrict-align -mpreferred-stack-boundary=3 -nostartfiles -Wall -Wl,--build-i=none
 
 DFLAGS = -D -Mnumeric,no-aliases
 CFLAGS = -march=rv32im_zicsr_zifencei -mabi=ilp32 -mstrict-align -mpreferred-stack-boundary=3 -nostartfiles -Wall -Wl,--build-i=none
@@ -39,7 +43,11 @@ LFLAGS = -T link.ld
 	@echo
 	@echo Assembling $(SYSCALL_INPUT)
 	$(CC_RISCV) -c $(SYSCALL_INPUT) $(SYSCALL_CFLAGS) -o $(SYSCALL_OUTPUT)
-	
+
+	@echo
+	@echo Compiling $(MULIB_INPUT)
+	$(CC_RISCV) -c $(MULIB_INPUT) $(MULIB_CFLAGS) -o $(MULIB_OUTPUT)
+    	
 	@echo
 	@echo Compiling $(addsuffix .c, $(MAIN_SRC))
 	$(CC_RISCV) -c $(addsuffix .c, $@) $(CFLAGS) -o $(BUILD_OUTPUT)

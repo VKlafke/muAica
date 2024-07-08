@@ -4,8 +4,6 @@
 #include "muKernel.h"
 #include "syscall.h"
 
-char recvStr[256];
-int recvStrCnt = 0;
 
 volatile char* tempStr;
 volatile int strCnt;
@@ -97,7 +95,7 @@ struct stStackFrame
 // Deals with exceptions or calls the external intr dispatcher for hardware interrupts
 int KernelTrapHandler(int mcause, int mepc, int ecallFunc, int a0, int a1, int a2, unsigned int* userStack) 
 {                          
-    char strHex[64];
+    /*char strHex[64];
     
     KernelUARTTX("KernelTrapHandler mcause: ");
     HexToAscii(mcause, strHex);
@@ -105,319 +103,15 @@ int KernelTrapHandler(int mcause, int mepc, int ecallFunc, int a0, int a1, int a
     KernelUARTTX(" mepc: ");
     HexToAscii(mepc, strHex);
     KernelUARTTX(strHex);
-    KernelUARTTX("\n");
+    KernelUARTTX("\n");*/
                                                                                       
     if (mcause >= 0) 
 	{ // System calls and exceptions
-		
-        if(mcause == EX_MISALIGNED_INSTRUCTION_ADDR)
-		{
-			// Treat exception
-			// ....
-                
-            /*
-			// DEBUG STRING, SIMULATION ONLY
-			__asm__ volatile 
-			("li	x24,'E'\n\t" \
-			 "li	x25,'X'\n\t" \
-			 "li 	x26,'C'\n\t" \
-			 "li	x27,'E'\n\t" \
-			 "li 	x28,'P'\n\t" \
-			 "li 	x29,'T'\n\t" \
-			 "li 	x30,'_'\n\t" \
-			 "li 	x31,'1'\n\t");*/
-             
-            KernelUARTTX("[EX_MISALIGNED_INSTRUCTION_ADDR]: mepc: ");
-                
-            char buf[64]; 
-                
-            HexToAscii(mepc, buf);
-            buf[8] = '\n';
-                
-            KernelUARTTX(buf);
-              
-			// Will get stuck on loop entering exception
-			return mepc; 	
-		}
-		else if(mcause == EX_ILLEGAL_INSTRUCTION)
-		{
-			// Treat exception
-			// ....
-			
-            /*
-			// DEBUG STRING, SIMULATION ONLY
-			__asm__ volatile 
-			("li	x24,'E'\n\t" \
-			 "li	x25,'X'\n\t" \
-			 "li 	x26,'C'\n\t" \
-			 "li	x27,'E'\n\t" \
-			 "li 	x28,'P'\n\t" \
-			 "li 	x29,'T'\n\t" \
-			 "li 	x30,'_'\n\t" \
-			 "li 	x31,'2'\n\t");*/
-            
-            int instAddr = 0x90000000 | mepc;
-            
-            int inst = *((int*)instAddr); // fetch inst
-            
-            int rs1 = 0;
-            int rs2 = 0;
-            int rd = 0;
-            
-            int OPTypeM = KernelDecodeMInstruction(inst, &rs1, &rs2, &rd, userStack);
-            
-            // reaproveitar multiplicação / divisão em instruções diferentes
-            // VERIFICAR existencia de overflow em mul 
-            
-            // regular multiplication, returns low 32 bits of result 
-            if(OPTypeM == MATCH_MUL)
-            {
-                int sum = 0;
-                                
-                // If any of the numbers to be multiplied is zero, skip mul 
-                if(rs1 != 0 && rs2 != 0)
-                {
-                    sum = KernelMUL(rs1, rs2);
-                }                
-                
-                // Store result in user stack 
-                userStack[rd] = sum;
-           
-                return mepc + 4; // done, resume at epc+4 
-            }
-            else if(OPTypeM == MATCH_MULH)
-            { // signed - signed mul, return high 32 bits 
-                
-                int sum = 0;
-                                
-                // If any of the numbers to be multiplied is zero, skip mul 
-                if(rs1 != 0 && rs2 != 0)
-                {
-                    sum = KernelMULH(rs1, rs2);
-                }                
-                
-                // Store result in user stack 
-                userStack[rd] = sum;
-           
-                return mepc + 4; // done, resume at epc+4        
-            }
-            else if(OPTypeM == MATCH_MULHSU)
-            { // signed - unsigned mul, return high 32 bits 
-                
-                int sum = 0;
-                                
-                // If any of the numbers to be multiplied is zero, skip mul 
-                if(rs1 != 0 && rs2 != 0)
-                {
-                    sum = KernelMULHSU(rs1, rs2);
-                }                
-                
-                // Store result in user stack 
-                userStack[rd] = sum;
-           
-                return mepc + 4; // done, resume at epc+4        
-            }
-            else if(OPTypeM == MATCH_MULHU)
-            { // unsigned - unsigned mul, return high 32 bits 
-                
-                int sum = 0;
-                                
-                // If any of the numbers to be multiplied is zero, skip mul 
-                if(rs1 != 0 && rs2 != 0)
-                {
-                    sum = KernelMULHU(rs1, rs2);
-                }                
-                
-                // Store result in user stack 
-                userStack[rd] = sum;
-           
-                return mepc + 4; // done, resume at epc+4        
-            }
-            else if(OPTypeM == MATCH_DIV)
-            { // signed - signed div 
-                
-                // If dividend is 0, skip operation and return 0
-                if(rs1 == 0)
-                {
-                    userStack[rd] = 0;
-                    
-                    return mepc + 4;
-                }
-                            
-                // Fetch data from registers pointed by instruction 
-                int dividend = rs1;
-                int divisor  = rs2;
-                
-                // Do the division 
-                int result = KernelDIV(dividend, divisor, NULL);
-                
-                userStack[rd] = result;
-              
-                return mepc + 4; // done, resume at epc+4           
-            }
-            else if(OPTypeM == MATCH_DIVU)
-            { // unsigned - unsigned div 
-                
-                // If dividend is 0, skip operation and return 0
-                if(rs1 == 0)
-                {
-                    userStack[rd] = 0;
-                    
-                    return mepc + 4;
-                }
-                            
-                // Fetch data from registers pointed by instruction 
-                int dividend = rs1;
-                int divisor  = rs2;
-                
-                // Do the division 
-                int result = KernelDIVU(dividend, divisor, NULL);
-                
-                userStack[rd] = result;
-              
-                return mepc + 4; // done, resume at epc+4           
-            }
-            else if(OPTypeM == MATCH_REM)
-            { // remainder of signed-signed div op 
-                                 
-                // Fetch data from registers pointed by instruction 
-                int dividend = rs1;
-                int divisor  = rs2;
-                int rem = 0;
-                
-                // Do the division, but we only need the remainder.
-                KernelDIV(dividend, divisor, &rem);
-                
-                userStack[rd] = rem;
-                
-                return mepc + 4; // done, resume at epc+4           
-            }
-            else if(OPTypeM == MATCH_REMU)
-            { // remainder of unsigned-unsigned div op 
-                                 
-                // Fetch data from registers pointed by instruction 
-                uint32_t dividend = (uint32_t)rs1;
-                uint32_t divisor  = (uint32_t)rs2;
-                uint32_t rem = 0;
-                
-                // Do the division, but we only need the remainder.
-                KernelDIVU(dividend, divisor, &rem);
-                
-                userStack[rd] = rem;
-                
-                return mepc + 4; // done, resume at epc+4           
-            }
-            else
-            {
-                KernelUARTTX("[EX_ILLEGAL_INSTRUCTION]: ");
-                
-                char buf[64]; 
-                
-                HexToAscii(mepc, buf);
-                buf[8] = '\n';
-                
-                KernelUARTTX(buf);
-                
-                HexToAscii(inst, buf);
-                buf[8] = '\n';
-                
-                KernelUARTTX(buf);
-            }
-             
-			 
-			// Skip illegal instruction on return 
-			return mepc + 4; 	
-		}
-		else if(mcause == EX_MISALIGNED_DATA_ADDR)
-		{		
-            KernelUARTTX("[EX_MISALIGNED_DATA_ADDR]: mepc: ");
-            
-            char buf[32]; 
-            HexToAscii(mepc, buf);
-            buf[8] = '\n';
-                
-            KernelUARTTX(buf);
-         
-			// Will get stuck on loop entering exception  
-			return mepc;
-		}
-		else if(mcause == EX_ECALL)
-		{
-			int retVal = 0;
-			
-			// Do the system call 		
-			switch(ecallFunc)
-			{				
-				case ECALL_EXT_INTR_REG: // Register ext intr handler 
-					KernelExtIntrHandlerSet(a0, (callback_t)a1);
-				break;
-				
-				case ECALL_BDP_CFG:	// BDPort config
-					KernelBDPortSetup(a0, a1, a2);
-				break;
-				
-				case ECALL_BDP_READ: // BDPort read
-					retVal = KernelBDPortRead();
-				break;
-				
-				case ECALL_BDP_WRITE: // BDPort write 
-					KernelBDPortWrite(a0);
-				break;
-				
-				case ECALL_PIC_MASK: // Set PIC intr mask 
-					KernelPICMask(a0);
-				break;
-				
-                case ECALL_TIMER_SET_CLK: // set timer base clock 
-                    KernelTimerSetClock(a0);
-                break;
-                
-                case ECALL_TIMER_SET_COUNT: // Set timer count, ms
-                    KernelTimerSetCount(a0);
-                break;
-                
-                case ECALL_TIMER_ENABLE: // enable / disable timer
-                    KernelTimerSetEnabled(a0);
-                break;
-                
-				case ECALL_UART_TX: // Send string to tx 
-					KernelUARTTX((char*)a0);
-				break;
-                
-				case ECALL_UART_RX: // Read byte from rx
-					retVal = KernelRXRead(a0);
-				break;
-                
-				default:
-				break;			
-			}
-			
-			
-			// Put retval in register a1 (a0 is return to mepc)			
-			__asm__ volatile
-			(
-				"mv a1, %0\n\t" 
-				:
-				: "r" (retVal)      
-				: "a1"          
-			);
-            
-			// DEBUG STRING, SIMULATION ONLY
-			/*__asm__ volatile 
-			("li	x24,'E'\n\t" \
-			 "li	x25,'C'\n\t" \
-			 "li 	x26,'A'\n\t" \
-			 "li	x27, 'L'\n\t" \
-			 "li 	x28,'L'\n\t" \
-			 "li 	x29,'_'\n\t" \
-			 "mv 	x30,%0\n\t" \
-			 "li 	x31,''\n\t"
-			 :
-			 : "r"(ecallFunc)
-			 );		*/
-		}
-		
-        return mepc + 4; // Return execution at the next inst 
+
+        // Call exception handler 
+        int retPC = KernelExceptionHandler(0, mcause, mepc, ecallFunc, a0, a1, a2, userStack);
+        
+        return retPC;
     }
     else 
 	{    // IRQs from PIC  
@@ -443,7 +137,7 @@ int KernelTrapHandler(int mcause, int mepc, int ecallFunc, int a0, int a1, int a
         // Change stvec to point to user mode ISR 
         w_stvec((uint32_t)trap_entry);
         
-        KernelUARTTX("Restoring mstatus and mie\n");
+        //KernelUARTTX("Restoring mstatus and mie\n");
 	
 		// Restore mstatus and mie 
 		__asm__ volatile
@@ -453,26 +147,25 @@ int KernelTrapHandler(int mcause, int mepc, int ecallFunc, int a0, int a1, int a
 			:
 			: "r"(_mstatus_), "r"(_val_)
 		);
-			
+	/*
         char strHex[64];
         
         HexToAscii(mepc, strHex) ;
         
         KernelUARTTX("Return to mepc: "); 
         KernelUARTTX(strHex);
-        KernelUARTTX("\n");
+        KernelUARTTX("\n");*/
         
         return mepc;
     }        
                                                                                                       
 }
 
-
 // KERNEL MODE trap handler 
 // Deals with software exceptions that may occur while in kernel mode 
 int KernelTrapReentryHandler(int mcause, int mepc, int ecallFunc, int a0, int a1, int a2, unsigned int* userStack) 
 {
-      char strHex[64];
+     /* char strHex[64];
     
     KernelUARTTX("KernelTrapReentryHandler mcause: ");
     HexToAscii(mcause, strHex);
@@ -480,295 +173,15 @@ int KernelTrapReentryHandler(int mcause, int mepc, int ecallFunc, int a0, int a1
     KernelUARTTX(" mepc: ");
     HexToAscii(mepc, strHex);
     KernelUARTTX(strHex);
-    KernelUARTTX("\n");
+    KernelUARTTX("\n");*/
                                                                                       
     if (mcause >= 0) 
 	{ // System calls and exceptions
-		
-        if(mcause == EX_MISALIGNED_INSTRUCTION_ADDR)
-		{
-			// Treat exception
-			// ....
-                             
-            KernelUARTTX("[KernelTrapReentryHandler] [EX_MISALIGNED_INSTRUCTION_ADDR]: mepc: ");
-                
-            char buf[64]; 
-                
-            HexToAscii(mepc, buf);
-            buf[8] = '\n';
-                
-            KernelUARTTX(buf);
-              
-			// Will get stuck on loop entering exception
-			return mepc; 	
-		}
-		else if(mcause == EX_ILLEGAL_INSTRUCTION)
-		{
-			// Treat exception
-			// ....
-			
-            int instAddr = 0x90000000 | mepc;
-            
-            int inst = *((int*)instAddr); // fetch inst
-            
-            int rs1 = 0;
-            int rs2 = 0;
-            int rd = 0;
-            
-            int OPTypeM = KernelDecodeMInstruction(inst, &rs1, &rs2, &rd, userStack);
-            
-            // reaproveitar multiplicação / divisão em instruções diferentes
-            // VERIFICAR existencia de overflow em mul 
-            
-            // regular multiplication, returns low 32 bits of result 
-            if(OPTypeM == MATCH_MUL)
-            {
-                int sum = 0;
-                                
-                // If any of the numbers to be multiplied is zero, skip mul 
-                if(rs1 != 0 && rs2 != 0)
-                {
-                    sum = KernelMUL(rs1, rs2);
-                }                
-                
-                // Store result in user stack 
-                userStack[rd] = sum;
-           
-                return mepc + 4; // done, resume at epc+4 
-            }
-            else if(OPTypeM == MATCH_MULH)
-            { // signed - signed mul, return high 32 bits 
-                
-                int sum = 0;
-                                
-                // If any of the numbers to be multiplied is zero, skip mul 
-                if(rs1 != 0 && rs2 != 0)
-                {
-                    sum = KernelMULH(rs1, rs2);
-                }                
-                
-                // Store result in user stack 
-                userStack[rd] = sum;
-           
-                return mepc + 4; // done, resume at epc+4        
-            }
-            else if(OPTypeM == MATCH_MULHSU)
-            { // signed - unsigned mul, return high 32 bits 
-                
-                int sum = 0;
-                                
-                // If any of the numbers to be multiplied is zero, skip mul 
-                if(rs1 != 0 && rs2 != 0)
-                {
-                    sum = KernelMULHSU(rs1, rs2);
-                }                
-                
-                // Store result in user stack 
-                userStack[rd] = sum;
-           
-                return mepc + 4; // done, resume at epc+4        
-            }
-            else if(OPTypeM == MATCH_MULHU)
-            { // unsigned - unsigned mul, return high 32 bits 
-                
-                int sum = 0;
-                                
-                // If any of the numbers to be multiplied is zero, skip mul 
-                if(rs1 != 0 && rs2 != 0)
-                {
-                    sum = KernelMULHU(rs1, rs2);
-                }                
-                
-                // Store result in user stack 
-                userStack[rd] = sum;
-           
-                return mepc + 4; // done, resume at epc+4        
-            }
-            else if(OPTypeM == MATCH_DIV)
-            { // signed - signed div 
-                
-                // If dividend is 0, skip operation and return 0
-                if(rs1 == 0)
-                {
-                    userStack[rd] = 0;
-                    
-                    return mepc + 4;
-                }
-                            
-                // Fetch data from registers pointed by instruction 
-                int dividend = rs1;
-                int divisor  = rs2;
-                
-                // Do the division 
-                int result = KernelDIV(dividend, divisor, NULL);
-                
-                userStack[rd] = result;
-              
-                return mepc + 4; // done, resume at epc+4           
-            }
-            else if(OPTypeM == MATCH_DIVU)
-            { // unsigned - unsigned div 
-                
-                // If dividend is 0, skip operation and return 0
-                if(rs1 == 0)
-                {
-                    userStack[rd] = 0;
-                    
-                    return mepc + 4;
-                }
-                            
-                // Fetch data from registers pointed by instruction 
-                int dividend = rs1;
-                int divisor  = rs2;
-                
-                // Do the division 
-                int result = KernelDIVU(dividend, divisor, NULL);
-                
-                userStack[rd] = result;
-              
-                return mepc + 4; // done, resume at epc+4           
-            }
-            else if(OPTypeM == MATCH_REM)
-            { // remainder of signed-signed div op 
-                                 
-                // Fetch data from registers pointed by instruction 
-                int dividend = rs1;
-                int divisor  = rs2;
-                int rem = 0;
-                
-                // Do the division, but we only need the remainder.
-                KernelDIV(dividend, divisor, &rem);
-                
-                userStack[rd] = rem;
-                
-                return mepc + 4; // done, resume at epc+4           
-            }
-            else if(OPTypeM == MATCH_REMU)
-            { // remainder of unsigned-unsigned div op 
-                                 
-                // Fetch data from registers pointed by instruction 
-                uint32_t dividend = (uint32_t)rs1;
-                uint32_t divisor  = (uint32_t)rs2;
-                uint32_t rem = 0;
-                
-                // Do the division, but we only need the remainder.
-                KernelDIVU(dividend, divisor, &rem);
-                
-                userStack[rd] = rem;
-                
-                return mepc + 4; // done, resume at epc+4           
-            }
-            else
-            {
-                KernelUARTTX("[KernelTrapReentryHandler] [EX_ILLEGAL_INSTRUCTION]: ");
-                
-                char buf[64]; 
-                
-                HexToAscii(mepc, buf);
-                buf[8] = '\n';
-                
-                KernelUARTTX(buf);
-                
-                HexToAscii(inst, buf);
-                buf[8] = '\n';
-                
-                KernelUARTTX(buf);
-            }
-             
-			 
-			// Skip illegal instruction on return 
-			return mepc + 4; 	
-		}
-		else if(mcause == EX_MISALIGNED_DATA_ADDR)
-		{	
-            KernelUARTTX("[EX_MISALIGNED_DATA_ADDR]: mepc: ");
-            
-            char buf[32]; 
-            HexToAscii(mepc, buf);
-            buf[8] = '\n';
-                
-            KernelUARTTX(buf);
-         
-			// Will get stuck on loop entering exception  
-			return mepc;
-		}
-		else if(mcause == EX_ECALL)
-		{
-			int retVal = 0;
-			
-			// Do the system call 		
-			switch(ecallFunc)
-			{				
-				case ECALL_EXT_INTR_REG: // Register ext intr handler 
-					KernelExtIntrHandlerSet(a0, (callback_t)a1);
-				break;
-				
-				case ECALL_BDP_CFG:	// BDPort config
-					KernelBDPortSetup(a0, a1, a2);
-				break;
-				
-				case ECALL_BDP_READ: // BDPort read
-					retVal = KernelBDPortRead();
-				break;
-				
-				case ECALL_BDP_WRITE: // BDPort write 
-					KernelBDPortWrite(a0);
-				break;
-				
-				case ECALL_PIC_MASK: // Set PIC intr mask 
-					KernelPICMask(a0);
-				break;
-				
-                case ECALL_TIMER_SET_CLK: // set timer base clock 
-                    KernelTimerSetClock(a0);
-                break;
-                
-                case ECALL_TIMER_SET_COUNT: // Set timer count, ms
-                    KernelTimerSetCount(a0);
-                break;
-                
-                case ECALL_TIMER_ENABLE: // enable / disable timer
-                    KernelTimerSetEnabled(a0);
-                break;
-                
-				case ECALL_UART_TX: // Send string to tx 
-					KernelUARTTX((char*)a0);
-				break;
-                
-				case ECALL_UART_RX: // Read byte from rx
-					retVal = KernelRXRead(a0);
-				break;
-                
-				default:
-				break;			
-			}
-			
-			
-			// Put retval in register a1 (a0 is return to mepc)			
-			__asm__ volatile
-			(
-				"mv a1, %0\n\t" 
-				:
-				: "r" (retVal)      
-				: "a1"          
-			);
-            
-			// DEBUG STRING, SIMULATION ONLY
-			/*__asm__ volatile 
-			("li	x24,'E'\n\t" \
-			 "li	x25,'C'\n\t" \
-			 "li 	x26,'A'\n\t" \
-			 "li	x27, 'L'\n\t" \
-			 "li 	x28,'L'\n\t" \
-			 "li 	x29,'_'\n\t" \
-			 "mv 	x30,%0\n\t" \
-			 "li 	x31,''\n\t"
-			 :
-			 : "r"(ecallFunc)
-			 );		*/
-		}
-		
-        return mepc + 4; // Return execution at the next inst 
+	
+        // Call exception handler 
+        int retPC = KernelExceptionHandler(1, mcause, mepc, ecallFunc, a0, a1, a2, userStack);
+        
+        return retPC;	
     }
     else 
 	{   
@@ -778,6 +191,303 @@ int KernelTrapReentryHandler(int mcause, int mepc, int ecallFunc, int a0, int a1
     }          
 }
 
+//
+int KernelExceptionHandler(int mode, int mcause, int mepc, int ecallFunc, int a0, int a1, int a2, unsigned int* userStack)
+{
+    if(mcause == EX_MISALIGNED_INSTRUCTION_ADDR)
+	{
+        if(mode == 0) // USER mode
+            KernelUARTTX("[EX_MISALIGNED_INSTRUCTION_ADDR]: mepc: ");
+        else
+            KernelUARTTX("[Reentry][EX_MISALIGNED_INSTRUCTION_ADDR]: mepc: ");
+       
+            
+        char buf[64]; 
+            
+        HexToAscii(mepc, buf);
+        buf[8] = '\n';
+            
+        KernelUARTTX(buf);
+          
+        // Will get stuck on loop entering exception
+        return mepc; 	
+    }
+    else if(mcause == EX_ILLEGAL_INSTRUCTION)
+    {
+        // Treat exception
+        // ....
+        
+        /*
+        // DEBUG STRING, SIMULATION ONLY
+        __asm__ volatile 
+        ("li	x24,'E'\n\t" \
+         "li	x25,'X'\n\t" \
+         "li 	x26,'C'\n\t" \
+         "li	x27,'E'\n\t" \
+         "li 	x28,'P'\n\t" \
+         "li 	x29,'T'\n\t" \
+         "li 	x30,'_'\n\t" \
+         "li 	x31,'2'\n\t");*/
+        
+        int instAddr = 0x90000000 | mepc;
+        
+        int inst = *((int*)instAddr); // fetch inst
+        
+        int rs1 = 0;
+        int rs2 = 0;
+        int rd = 0;
+        
+        int OPTypeM = KernelDecodeMInstruction(inst, &rs1, &rs2, &rd, userStack);
+        
+        // reaproveitar multiplicação / divisão em instruções diferentes
+        // VERIFICAR existencia de overflow em mul 
+        
+        // regular multiplication, returns low 32 bits of result 
+        if(OPTypeM == MATCH_MUL)
+        {
+            int sum = 0;
+                            
+            // If any of the numbers to be multiplied is zero, skip mul 
+            if(rs1 != 0 && rs2 != 0)
+            {
+                sum = KernelMUL(rs1, rs2);
+            }                
+            
+            // Store result in user stack 
+            userStack[rd] = sum;
+       
+            return mepc + 4; // done, resume at epc+4 
+        }
+        else if(OPTypeM == MATCH_MULH)
+        { // signed - signed mul, return high 32 bits 
+            
+            int sum = 0;
+                            
+            // If any of the numbers to be multiplied is zero, skip mul 
+            if(rs1 != 0 && rs2 != 0)
+            {
+                sum = KernelMULH(rs1, rs2);
+            }                
+            
+            // Store result in user stack 
+            userStack[rd] = sum;
+       
+            return mepc + 4; // done, resume at epc+4        
+        }
+        else if(OPTypeM == MATCH_MULHSU)
+        { // signed - unsigned mul, return high 32 bits 
+            
+            int sum = 0;
+                            
+            // If any of the numbers to be multiplied is zero, skip mul 
+            if(rs1 != 0 && rs2 != 0)
+            {
+                sum = KernelMULHSU(rs1, rs2);
+            }                
+            
+            // Store result in user stack 
+            userStack[rd] = sum;
+       
+            return mepc + 4; // done, resume at epc+4        
+        }
+        else if(OPTypeM == MATCH_MULHU)
+        { // unsigned - unsigned mul, return high 32 bits 
+            
+            int sum = 0;
+                            
+            // If any of the numbers to be multiplied is zero, skip mul 
+            if(rs1 != 0 && rs2 != 0)
+            {
+                sum = KernelMULHU(rs1, rs2);
+            }                
+            
+            // Store result in user stack 
+            userStack[rd] = sum;
+       
+            return mepc + 4; // done, resume at epc+4        
+        }
+        else if(OPTypeM == MATCH_DIV)
+        { // signed - signed div 
+            
+            // If dividend is 0, skip operation and return 0
+            if(rs1 == 0)
+            {
+                userStack[rd] = 0;
+                
+                return mepc + 4;
+            }
+                        
+            // Fetch data from registers pointed by instruction 
+            int dividend = rs1;
+            int divisor  = rs2;
+            
+            // Do the division 
+            int result = KernelDIV(dividend, divisor, NULL);
+            
+            userStack[rd] = result;
+          
+            return mepc + 4; // done, resume at epc+4           
+        }
+        else if(OPTypeM == MATCH_DIVU)
+        { // unsigned - unsigned div 
+            
+            // If dividend is 0, skip operation and return 0
+            if(rs1 == 0)
+            {
+                userStack[rd] = 0;
+                
+                return mepc + 4;
+            }
+                        
+            // Fetch data from registers pointed by instruction 
+            int dividend = rs1;
+            int divisor  = rs2;
+            
+            // Do the division 
+            int result = KernelDIVU(dividend, divisor, NULL);
+            
+            userStack[rd] = result;
+          
+            return mepc + 4; // done, resume at epc+4           
+        }
+        else if(OPTypeM == MATCH_REM)
+        { // remainder of signed-signed div op 
+                             
+            // Fetch data from registers pointed by instruction 
+            int dividend = rs1;
+            int divisor  = rs2;
+            int rem = 0;
+            
+            // Do the division, but we only need the remainder.
+            KernelDIV(dividend, divisor, &rem);
+            
+            userStack[rd] = rem;
+            
+            return mepc + 4; // done, resume at epc+4           
+        }
+        else if(OPTypeM == MATCH_REMU)
+        { // remainder of unsigned-unsigned div op 
+                             
+            // Fetch data from registers pointed by instruction 
+            uint32_t dividend = (uint32_t)rs1;
+            uint32_t divisor  = (uint32_t)rs2;
+            uint32_t rem = 0;
+            
+            // Do the division, but we only need the remainder.
+            KernelDIVU(dividend, divisor, &rem);
+            
+            userStack[rd] = rem;
+            
+            return mepc + 4; // done, resume at epc+4           
+        }
+        else
+        {
+            if(mode == 0) // USER mode 
+                KernelUARTTX("[EX_ILLEGAL_INSTRUCTION]: ");
+            else 
+                KernelUARTTX("[Reentry][EX_ILLEGAL_INSTRUCTION]: ");
+            
+            char buf[64]; 
+            
+            HexToAscii(mepc, buf);
+            buf[8] = '\n';
+            
+            KernelUARTTX(buf);
+            
+            HexToAscii(inst, buf);
+            buf[8] = '\n';
+            
+            KernelUARTTX(buf);
+        }
+         
+         
+        // Skip illegal instruction on return 
+        return mepc + 4; 	
+    }
+    else if(mcause == EX_MISALIGNED_DATA_ADDR)
+    {
+        if(mode == 0) // USER mode 
+            KernelUARTTX("[EX_MISALIGNED_DATA_ADDR]: mepc: ");
+        else
+            KernelUARTTX("[Reentry][EX_MISALIGNED_DATA_ADDR]: mepc: ");
+        
+        char buf[32]; 
+        HexToAscii(mepc, buf);
+        buf[8] = '\n';
+            
+        KernelUARTTX(buf);
+     
+        // Will get stuck on loop entering exception  
+        return mepc;
+    }
+    else if(mcause == EX_ECALL)
+    {
+        int retVal = 0;
+        
+        // Do the system call 		
+        switch(ecallFunc)
+        {				
+            case ECALL_EXT_INTR_REG: // Register ext intr handler 
+                KernelExtIntrHandlerSet(a0, (callback_t)a1);
+            break;
+            
+            case ECALL_BDP_CFG:	// BDPort config
+                KernelBDPortSetup(a0, a1, a2);
+            break;
+            
+            case ECALL_BDP_READ: // BDPort read
+                retVal = KernelBDPortRead();
+            break;
+            
+            case ECALL_BDP_WRITE: // BDPort write 
+                KernelBDPortWrite(a0);
+            break;
+            
+            case ECALL_PIC_MASK: // Set PIC intr mask 
+                KernelPICMask(a0);
+            break;
+            
+            case ECALL_TIMER_SET_CLK: // set timer base clock 
+                KernelTimerSetClock(a0);
+            break;
+            
+            case ECALL_TIMER_SET_COUNT: // Set timer count, ms
+                KernelTimerSetCount(a0);
+            break;
+            
+            case ECALL_TIMER_ENABLE: // enable / disable timer
+                KernelTimerSetEnabled(a0);
+            break;
+            
+            case ECALL_UART_TX: // Send string to tx 
+                KernelUARTTX((char*)a0);
+            break;
+            
+            case ECALL_UART_RX: // Read byte from rx
+                retVal = KernelRXRead(a0);
+            break;
+            
+            case ECALL_GETSTRING: // Get user input via UART 
+                retVal = KernelGetString((char**)a0);
+            break;
+            
+            default:
+            break;			
+        }
+        
+        // Put retval in register a1 (a0 is return to mepc)			
+        __asm__ volatile
+        (
+            "mv a1, %0\n\t" 
+            :
+            : "r" (retVal)      
+            : "a1"          
+        );
+
+    }
+    
+    return mepc + 4; // Return execution at the next inst  
+}
 
 /////////////////////////
 //
@@ -789,37 +499,23 @@ void KernelExtIntrDispatcher()
 {
 	// Get IRQ number from PIC
 	int IRQ_ID = PIC_IRQ_ID;
-	
-	
-	// SIMULATION DEBUG STRING IN REGISTERS
-	/*__asm__ volatile 
-	("li	x24,''\n\t" \
-	 "li	x25,''\n\t" \
-	 "li 	x26,'I'\n\t" \
-	 "li	x27,'N'\n\t" \
-	 "li	x28,'T'\n\t" \
-	 "li	x29,'R'\n\t" \
-	 "li 	x30,'_'\n\t");*/
-
-
-    KernelUARTTX("Intr dispatcher start\n");
 
 	// Treat IRQ based on ID	
 	if(IRQ_ID >= 0 && IRQ_ID < MAX_EXT_INTR)
 	{
 		if(vec_Ext_Intr_Handler[IRQ_ID] != 0)
         {
-            char strHex[32];
+            /*char strHex[32];
             
             KernelUARTTX("INTR Dispatcher: ");
             HexToAscii(IRQ_ID, strHex), 
             KernelUARTTX(strHex);
-            KernelUARTTX("\n");
+            KernelUARTTX("\n");*/
             
 			vec_Ext_Intr_Handler[IRQ_ID]();
             
             
-            KernelUARTTX("INTR Dispatcher RETURN\n");
+           // KernelUARTTX("INTR Dispatcher RETURN\n");
             
         }
 		else 
@@ -828,9 +524,6 @@ void KernelExtIntrDispatcher()
 	
 	// Notify PIC that IRQ was treated
 	PIC_ACK = IRQ_ID;
-    
-    
-    KernelUARTTX("Intr dispatcher end\n");
 }
 
 // Register external intr handler callbacks from user 
@@ -853,17 +546,6 @@ int KernelExtIntrHandlerSet(int n, callback_t handler_callback)
 // Default external interrupt handler 
 void KernelExtIntrDefault(int irqID)
 {
-	// DEBUG SIMULATION
-   /* __asm__ volatile 
-	("li	x24,''\n\t" \
-	 "li	x25,'I'\n\t" \
-	 "li 	x26,'N'\n\t" \
-	 "li	x27,'T'\n\t" \
-	 "li 	x28,'R'\n\t" \
-	 "li 	x29,'_'\n\t" \
-	 "li 	x30,'D'\n\t"
-	);*/
-    
     // Mensagem "CALLBACK %d NÃO REGISTRADO"  
     KernelUARTTX("Default INTR callback: ");
 	char valText[3]; 
@@ -968,17 +650,40 @@ char KernelRXRead(int pooling)
     return UART_RX;
 }
 
+char recvStr[256];
+int recvStrCnt = 0;
+int recvNewLine = 0;
+
+// Used with KernelGetStr(char*)
 void KernelRXCallback()
 {
-    char recvByte = UART_RX;
+    char recvByte = KernelRXRead(0);
     
+    if(recvByte == 13) // 13 = return key
+    {
+        recvStr[recvStrCnt++] = recvByte;
+        recvStr[recvStrCnt++] = '\0';
+        recvNewLine = 1;
+    }
+   
     recvStr[recvStrCnt++] = recvByte;
+}
+
+// Return string input from user, if available.
+int KernelGetString(char** pStr)
+{
+    if(recvNewLine == 0)   
+    {
+        return 0;
+    }
     
+    *pStr = recvStr;
     
-    KernelUARTTX("RX Callback: ");
-    KernelUARTTX(recvByte);
-    KernelUARTTX("\n");
+    int ret = recvStrCnt;
+    recvStrCnt = 0;
+    recvNewLine = 0;
     
+    return ret;
 }
 
 							//
@@ -1018,122 +723,80 @@ void KernelTimerSetEnabled(int enable)
 //  'M' extension implementation
 //
 
-// Function to emulate the MULHSU instruction in RISC-V
-int32_t KernelMULHSU(int32_t multiplicand, uint32_t multiplier)
+// Perform unsigned mul
+uint64_t KernelUnsignedMultiply(uint32_t multiplicand, uint32_t multiplier) 
 {
-	uint64_t product = 0;  // To hold the full product without loss
-	int32_t high = 0;      // To extract and return the high 32 bits
-	int sign = multiplicand < 0 ? -1 : 1;  // Determine the sign of rs1
+	uint64_t product = 0;
 
-	// Use absolute value of rs1 for multiplication
-	uint32_t abs_rs1 = multiplicand < 0 ? (uint32_t)(-multiplicand) : (uint32_t)multiplicand;
-
-	// Iterate through each bit of rs2
 	for (int i = 0; i < 32; i++) 
-	{
-		if (multiplier & (1U << i))
-		{
-			product += ((uint64_t)abs_rs1 << i);
-		}
-	}
-
-	// Adjust the sign of the product
-	if (sign == -1)
-	{
-		product = -(int64_t)product;
-	}
-
-	// Shift the product right by 32 bits to get the high part
-	high = (int32_t)(product >> 32);
-
-	// Apply the sign of rs1 to the result
-	return high;
-}
-
-// Function to emulate the MULHU instruction in RISC-V for unsigned integers
-uint32_t KernelMULHU(uint32_t multiplicand, uint32_t multiplier)
-{
-	uint64_t product = 0;  // To hold the full product without loss
-	uint32_t high = 0;     // To extract and return the high 32 bits
-
-	// Iterate through each bit of rs2
-	for (int i = 0; i < 32; i++) 
-	{
-		if (multiplier & (1U << i))
-		{
+    {
+		if (multiplier & (1U << i)) 
+        {
 			product += ((uint64_t)multiplicand << i);
 		}
 	}
 
-	// Shift the product right by 32 bits to get the high part
-	high = (uint32_t)(product >> 32);
-
-	return high;
+	return product;
 }
 
-// Function to emulate the MULH instruction in RISC-V for signed integers
-int32_t KernelMULH(int32_t multiplicand, int32_t multiplier)
+// Function to handle signed multiplication and sign adjustment
+int64_t KernelSignedMultiply(int32_t multiplicand, int32_t multiplier, int extract_high) 
 {
-	int64_t high = 0; // This will eventually hold the high 32 bits of the result
-	uint32_t abs_multiplicand = multiplicand < 0 ? (uint32_t)(-multiplicand) : (uint32_t)multiplicand;
-	uint32_t abs_multiplier = multiplier < 0 ? (uint32_t)(-multiplier) : (uint32_t)multiplier;
-	int64_t temp_product = 0;
+	int64_t product;
+	uint32_t abs_multiplicand = multiplicand < 0 ? -multiplicand : multiplicand;
+	uint32_t abs_multiplier = multiplier < 0 ? -multiplier : multiplier;
+	int sign = (multiplicand < 0) ^ (multiplier < 0) ? -1 : 1;
 
-	int sign = (multiplicand < 0) ^ (multiplier < 0) ? -1 : 1;  // Determine the sign of the result
+	product = KernelUnsignedMultiply(abs_multiplicand, abs_multiplier);
 
-	// Iterate through each bit of rs2
-	for (int i = 0; i < 32; i++) 
+	if (sign == -1) 
 	{
-		if (abs_multiplier & (1 << i))
-		{
-			temp_product += ((int64_t)abs_multiplicand << i);
-		}
+		product = -product;
 	}
 
-	// Adjust the sign of the product
-	if (sign == -1)
+	if (extract_high) 
 	{
-		temp_product = -temp_product;
+		return product >> 32;
 	}
-
-	// Shift right to get the high part
-	high = temp_product >> 32;
-
-	// Adjust sign
-	return (int32_t)high;
+	else 
+	{
+		return product;
+	}
 }
 
-// MUL instruction 
+// Function to emulate the MULHSU instructionb. (signed-unsigned integers)
+// returns high 32 bytes of result
+int32_t KernelMULHSU(int32_t multiplicand, uint32_t multiplier) 
+{
+	uint64_t product = KernelUnsignedMultiply(multiplicand < 0 ? -multiplicand : multiplicand, multiplier);
+
+	if (multiplicand < 0) 
+	{
+		product = -(int64_t)product;
+	}
+
+	return (int32_t)(product >> 32);
+}
+
+// Function to emulate the MULHU instruction. (unsigned integers)
+// returns high 32 bytes of result
+uint32_t KernelMULHU(uint32_t multiplicand, uint32_t multiplier) 
+{
+	return (uint32_t)(KernelUnsignedMultiply(multiplicand, multiplier) >> 32);
+}
+
+// Function to emulate the MULH instruction. (signed integers)
+// returns high 32 bytes of result
+int32_t KernelMULH(int32_t multiplicand, int32_t multiplier) 
+{
+	return (int32_t)KernelSignedMultiply(multiplicand, multiplier, 1);
+}
+
+// Function to emulate the MUL instruction.
+// returns low 32 bytes of result
 int32_t KernelMUL(int32_t multiplicand, int32_t multiplier) 
 {
-	int64_t product = 0;  // Using int64_t to handle potential overflow during multiplication
-	int32_t sign = (multiplicand < 0) ^ (multiplier < 0) ? -1 : 1;  // Determine the sign of the result
-
-	// Convert multiplicand and multiplier to their absolute values to simplify multiplication    
-	uint32_t abs_multiplicand = multiplicand < 0 ? (uint32_t)(-multiplicand) : (uint32_t)multiplicand;
-	uint32_t abs_multiplier = multiplier < 0 ? (uint32_t)(-multiplier) : (uint32_t)multiplier;
-
-
-	// Perform multiplication using the shift-and-add method
-	while (abs_multiplier != 0) 
-	{
-		if (abs_multiplier & 1) 
-		{
-			product += abs_multiplicand;  // Add the multiplicand to the product if the current bit of multiplier is 1
-		}
-
-		abs_multiplicand <<= 1;  // Left shift the multiplicand (equivalent to multiplying it by 2)
-		abs_multiplier >>= 1;    // Right shift the multiplier, moving to the next bit
-	}
-
-	// Adjust the sign of the product
-	if (sign == -1)
-	{
-		product = -product; 
-	}
-
-	// Cast and return only the lower 32 bits of the product, simulating the behavior of the RISC-V MUL instruction
-	return (int32_t)(product);
+	return (int32_t)KernelSignedMultiply(multiplicand, multiplier, 0);
 }
 
 // Function to emulate the DIVU instruction in RISC-V for unsigned division
@@ -1146,7 +809,7 @@ uint32_t KernelDIVU(uint32_t rs1, uint32_t rs2, uint32_t* rem)
 		if (rem != NULL)
 			*rem = rs1; // Set remainder to dividend if pointer is not NULL
 
-		// KernelUARTTX("{EXCEPTION} - DIV BY ZERO - ");
+		KernelUARTTX("{EXCEPTION} - DIV BY ZERO - ");
 
 		return UINT32_MAX; // Return error code for division by zero
 	}

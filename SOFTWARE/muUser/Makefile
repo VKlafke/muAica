@@ -29,10 +29,10 @@ SYSCALL_CFLAGS = -march=rv32i_zicsr_zifencei -mabi=ilp32 -mstrict-align -mprefer
 
 MULIB_OUTPUT = obj/mulib.obj
 MULIB_INPUT = src/muLib.c
-MULIB_CFLAGS = -march=rv32im_zicsr_zifencei -mabi=ilp32 -mstrict-align -mpreferred-stack-boundary=3 -nostartfiles -Wall -Wl,--build-i=none
+MULIB_CFLAGS = -march=rv32im_zicsr_zifencei -mabi=ilp32 -mstrict-align -mpreferred-stack-boundary=3 -nostartfiles -Wall -Wl,--build-i=none -fno-zero-initialized-in-bss
 
 DFLAGS = -D -Mnumeric,no-aliases
-CFLAGS = -march=rv32im_zicsr_zifencei -mabi=ilp32 -mstrict-align -mpreferred-stack-boundary=3 -nostartfiles -Wall -Wl,--build-i=none
+CFLAGS = -march=rv32im_zicsr_zifencei -mabi=ilp32 -mstrict-align -mpreferred-stack-boundary=3 -nostartfiles -Wall -Wl,--build-i=none -fno-zero-initialized-in-bss
 LFLAGS = -T link.ld
 
 %:

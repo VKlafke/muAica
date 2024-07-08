@@ -2,7 +2,7 @@
 #include <stdarg.h>
 
 // constante endereços programa usuario
-void (*UserMainPtr)(void) = (void(*)(void))0x21B4;
+void (*UserMainPtr)(void) = (void(*)(void))0x1B50;
 
 int lastReceiveSize = 0;
 
@@ -37,7 +37,7 @@ int main()
         
         int i = 0;
         int recvData = 0;
-        int instAddr = 0x900021B4;
+        int instAddr = 0x90001B50;
         
         shiftCount = 0;
         
@@ -135,7 +135,10 @@ int main()
         // Call the user main function
         UserMainPtr();
       
-        KernelUARTTX("Finished executing.\n");
+        KernelUARTTX("Finished executing.\n");        
+            
+        // Reset pic mask so we can safely receive another software.
+        KernelPICMask(0x0);
     }
  
     return 0;

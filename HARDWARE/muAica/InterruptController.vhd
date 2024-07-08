@@ -64,6 +64,11 @@ begin
             if address = INT_ACK_ADDR and ce = '1' and rw = '1' then
                 irq_reg(TO_INTEGER(UNSIGNED(data_in))) <= '0';
             end if;
+
+            -- IRQ reset when setting mask
+            if address = MASK_ADDR and ce = '1' and rw = '1' then
+                irq_reg <= (others=>'0');
+            end if;
         
         end if;
     end process;

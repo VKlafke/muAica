@@ -7,6 +7,14 @@ enum Ext_Intr_Reg_Error_Codes
 	INVALID_CALLBACK,
 };
 
+
+// delay func
+void delay(int count)
+{
+    while(count > 0)
+        count--;
+}
+
 // Define the function pointer type for the intr handler callbacks
 typedef void (*callback_t)();
 
@@ -37,5 +45,8 @@ void TimerSetBaseClock(int clock);
 void TimerSetCount(int count);
 
 void TimerSetEnabled(int enable);
+
+// Read string from UART
+int GetString(char** pStr);
 
 #endif

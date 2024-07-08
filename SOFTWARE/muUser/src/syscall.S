@@ -62,3 +62,10 @@ UARTRead:
     li a7, ECALL_UART_RX
     ecall
     ret
+      
+.global GetString
+GetString:
+    li a7, ECALL_GETSTRING
+    ecall
+    ret  
+    

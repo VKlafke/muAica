@@ -84,10 +84,15 @@ static inline void w_stvec(uint32_t x)
 // 
 int main();
 
-// Handles the treatment of exceptions / interrupts.
+// Handles the treatment of exceptions / interrupts from USER MODE
 // Gets trap ID from mcause and calls the appropriate handler for it
 int KernelTrapHandler(int mcause, int mepc, int ecallFunc, int a0, int a1, int a2, unsigned int* sp);
 
+// Handles treatment of exceptions that happen in KERNEL MODE 
+int KernelTrapReentryHandler(int mcause, int mepc, int ecallFunc, int a0, int a1, int a2, unsigned int* userStack);
+
+
+int KernelExceptionHandler(int mode, int mcause, int mepc, int ecallFunc, int a0, int a1, int a2, unsigned int* userStack);
 
 ///////////////////////
 //
@@ -150,8 +155,14 @@ void KernelUARTTX(char* str);
 // Get data from RX 
 char KernelRXRead(int pooling);
 
-// Get full strings from RX, default callback
+// Stores received bytes in a buffer untill 'return' key is received
+// once we receive 'return', signal that a line is ready to be read
+// by KernelGetString
 void KernelRXCallback();
+
+// Return string size, if one is ready, and pointer to str 
+// 0 otherwise
+int KernelGetString(char** pStr);
 
 //
 //////////////////////////
@@ -179,6 +190,8 @@ void KernelTimerSetEnabled(int enable);
 //  'M' extension implementation
 //
 
+uint64_t KernelUnsignedMultiply(uint32_t multiplicand, uint32_t multiplier);
+int64_t KernelSignedMultiply(int32_t multiplicand, int32_t multiplier, int extract_high);
 int32_t KernelMULHSU(int32_t multiplicand, uint32_t multiplier);
 uint32_t KernelMULHU(uint32_t multiplicand, uint32_t multiplier);
 int32_t KernelMULH(int32_t multiplicand, int32_t multiplier);
@@ -188,7 +201,7 @@ int32_t KernelMUL(int32_t multiplicand, int32_t multiplier);
 
 uint32_t KernelDIVU(uint32_t rs1, uint32_t rs2, uint32_t* rem);
 // KernelDIV performs a signed division and calculates the remainder.
-// It handles edge cases such as division by zero and INT_MIN overflow carefully.
+// It handles edge cases such as division by zero and INT_MIN overflow.
 int KernelDIV(int dividend, int divisor, int* rem);
 
 

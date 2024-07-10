@@ -21,6 +21,11 @@
 #define TIMER_COUNT    (*((volatile int*) 0x80004010))
 #define TIMER_ENABLE   (*((volatile char*) 0x80004020))	
 
+#define WATCHDOG_BASE_CLK (*((volatile int*) 0x80006000))
+#define WATCHDOG_COUNT    (*((volatile int*) 0x80006010))
+#define WATCHDOG_ENABLE   (*((volatile char*) 0x80006020))	
+#define WATCHDOG_KICK     (*((volatile char*) 0x80006020))	
+
 // Default values
 #define MAX_EXT_INTR 8
 
@@ -106,6 +111,9 @@ void KernelExtIntrDispatcher();
 
 // Register external intr handler callbacks from user 
 int KernelExtIntrHandlerSet(int n, callback_t handler_callback);
+
+// Reset external intr handler callback to default 
+int KernelExtIntrHandlerReset(int n);
 
 // Default callback for external intr 
 void KernelExtIntrDefault(int irqID);

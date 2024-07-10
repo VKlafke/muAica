@@ -428,7 +428,11 @@ int KernelExceptionHandler(int mode, int mcause, int mepc, int ecallFunc, int a0
         switch(ecallFunc)
         {				
             case ECALL_EXT_INTR_REG: // Register ext intr handler 
-                KernelExtIntrHandlerSet(a0, (callback_t)a1);
+                retVal = KernelExtIntrHandlerSet(a0, (callback_t)a1);
+            break;
+            
+            case ECALL_EXT_INTR_RST: // Reset ext intr handler callback 
+                retVal = KernelExtIntrHandlerReset(a0);
             break;
             
             case ECALL_BDP_CFG:	// BDPort config
@@ -541,6 +545,27 @@ int KernelExtIntrHandlerSet(int n, callback_t handler_callback)
     vec_Ext_Intr_Handler[n] = handler_callback;
 	
 	return 0;
+}
+
+// Reset indicated callback to default func
+int KernelExtIntrHandlerReset(int n)
+{
+	// Check for valid index 
+    if (n < 0 || n >= MAX_EXT_INTR) 
+		return N_OUT_OF_BOUNDS;
+    
+    
+    if(n == 0) // RX callback 
+    {
+        vec_Ext_Intr_Handler[n] = KernelRXCallback;
+    }
+    else
+    {
+        // NULL value calls default handler 
+        vec_Ext_Intr_Handler[n] = NULL;
+    }
+    
+    return 0;
 }
 
 // Default external interrupt handler 

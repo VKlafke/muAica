@@ -13,12 +13,13 @@ package map_pkg is
   --constant  SDATA_end   : std_logic_vector(31 downto 0) := x"FFFE_FFFF";
 
   --------- Peripherals section
-  constant  BDPort_Addr  : std_logic_vector(7 downto 0) := x"00";
-  constant  PIC_Addr     : std_logic_vector(7 downto 0) := x"01";
-  constant  TX_Addr      : std_logic_vector(7 downto 0) := x"02";
-  constant  RX_Addr      : std_logic_vector(7 downto 0) := x"03";
-  constant  Timer_Addr   : std_logic_vector(7 downto 0) := x"04";
-  constant  RX_DV_Addr   : std_logic_vector(7 downto 0) := x"05";
+  constant  BDPort_Addr    : std_logic_vector(7 downto 0) := x"00";
+  constant  PIC_Addr       : std_logic_vector(7 downto 0) := x"01";
+  constant  TX_Addr        : std_logic_vector(7 downto 0) := x"02";
+  constant  RX_Addr        : std_logic_vector(7 downto 0) := x"03";
+  constant  Timer_Addr     : std_logic_vector(7 downto 0) := x"04";
+  constant  RX_DV_Addr     : std_logic_vector(7 downto 0) := x"05";
+  constant  Watchdog_Addr  : std_logic_vector(7 downto 0) := x"06";
   --constant  IO_end    	: std_logic_vector(31 downto 0) := x"FFFF_FFFF";
 
   -- 16lsb of io devices

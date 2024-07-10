@@ -81,21 +81,32 @@ void CallbackButtonC4()
      dispCount[3] = countRight % 10;
 }
 
+#define WATCHDOG_BASE_CLK (*((volatile int*) 0x80006000))
+#define WATCHDOG_COUNT    (*((volatile int*) 0x80006010))
+#define WATCHDOG_ENABLE   (*((volatile char*) 0x80006020))	
+#define WATCHDOG_KICK     (*((volatile char*) 0x80006020))	
+
 void CallbackButtonD9()
 {
     int i = 0;
+    
+    UARTPrint("Call_D9\n");
      
 	 // Debounce
 	 while(i < 900000)
-		 i++;
+         i++;
      
-     countRight++;
+     //countRight++;
      
-     if(countRight > 99)
-         countRight = 0;
+     //if(countRight > 99)
+       //  countRight = 0;
 
-     dispCount[2] = countRight / 10;
-     dispCount[3] = countRight % 10;
+     //dispCount[2] = countRight / 10;
+     //dispCount[3] = countRight % 10;
+     
+     WATCHDOG_BASE_CLK = 50000;
+     WATCHDOG_COUNT  = 10000;
+     WATCHDOG_ENABLE = 1;
 }
     
 int main()

@@ -45,7 +45,8 @@ entity MemoryCtrl is
 	rd_TX		 : out std_logic;
 	ce_RX		 : out std_logic;
 	rd_RX_dv	 : out std_logic;
-	ce_Timer	 : out std_logic
+	ce_Timer	 : out std_logic;
+	ce_Watchdog  : out std_logic
   );
 end entity MemoryCtrl;
 
@@ -257,6 +258,10 @@ begin
 					
 	-- Timer enable
 	ce_Timer <= '1' when (currentState = st_Prph_Exec AND addr_p = Timer_Addr AND we = '1') else 
+	'0';	
+
+	-- Watchdog enable
+	ce_Watchdog <= '1' when (currentState = st_Prph_Exec AND addr_p = Watchdog_Addr AND we = '1') else 
 	'0';
 	
 

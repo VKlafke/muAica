@@ -19,6 +19,7 @@ void delay(int count)
 
 // ECALL - External interrupts
 int ExtIntrRegisterCallback(int n, callback_t handler_callback);
+int ExtIntrResetCallback(int n);
 
 // ECALL - BDPort 
 void BDPortSetup(int config, int enable, int intr);

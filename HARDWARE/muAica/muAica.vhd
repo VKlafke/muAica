@@ -110,6 +110,9 @@ end component;
   signal ce_Timer   : std_logic; -- Timer write enable
   signal timer_intr : std_logic; -- Timer -> PIC
 
+  signal ce_Watchdog  : std_logic; -- Watchdog enable
+  signal rst_Watchdog : std_logic; -- Reset signal from watchdog
+
   signal rst_test : std_logic; -- testing reset
   signal rst_pulse : std_logic;
 
@@ -194,7 +197,8 @@ begin
     rd_TX     => rd_TX,
     ce_RX     => rd_RX,
     rd_RX_dv	=> pool_rx,	  
-    ce_Timer  => ce_Timer
+    ce_Timer  => ce_Timer,
+    ce_Watchdog => ce_Watchdog
 	);
   
 data_bus <=  x"000000" & data_o_RX_Buf        when rd_RX  = '1' else 
@@ -289,24 +293,6 @@ data_bus <=  x"000000" & data_o_RX_Buf        when rd_RX  = '1' else
     data_o_ready => rx_dv_ext
   );
 
-
-  --process(clk, rst)
-  --begin
---    if rst = '1' then
---      data_av <= '0'
-
-    --elsif rising_edge(clk) then
---      if rx = '1' then
-        --data_rx <= data_o_rx;
---        data_av <= '1';
---      end if;
-      
---      if rd_rx = '1' then
---        data_av <= '0'
---      end if;
-      
---  end process
-
   
   TIMER_0: entity work.TimerInterrupt
 	generic map (
@@ -322,13 +308,29 @@ data_bus <=  x"000000" & data_o_RX_Buf        when rd_RX  = '1' else
     ce       => ce_Timer,
     intr     => timer_intr
   );
+  
+  WATCHDOG: entity work.WatchdogTimer
+	generic map (
+		BASE_CLOCK_ADDR	 => "00000000",
+		TIMER_VAL_ADDR	 => "00000001",
+		ENABLE_ADDR		   => "00000010",
+    KICK_ADDR        => "00000011"
+	)
+	port map (  
+		clk 	   => clk,
+		rst 	   => rst,		
+    data_in  => data_in,
+    address  => addr_prph,
+    ce       => ce_Watchdog,
+    rst_o    => rst_Watchdog
+  );
 
 ------------------------------------------------------
 -- Memories
 --
   INSTRUCTION_MEMORY: entity work.Memory(behavioral)
 	generic map (
-		SIZE            => 8192,                                  -- Memory depth 
+		SIZE            => 8192,                                  -- Memory depth 32kb
 		ADDR_WIDTH		  => 32,
 		COL_WIDTH		    => 8,
 		NB_COL		    	=> 4,
@@ -346,7 +348,7 @@ data_bus <=  x"000000" & data_o_RX_Buf        when rd_RX  = '1' else
 	
 DATA_MEMORY: entity work.Memory(behavioral)
 	generic map (
-		SIZE            => 4096,                         -- Memory depth 
+		SIZE            => 4096,                         -- Memory depth 16kb
 		ADDR_WIDTH		  => 32,
 		COL_WIDTH		    => 8,
 		NB_COL			    => 4,
@@ -373,7 +375,7 @@ DATA_MEMORY: entity work.Memory(behavioral)
     rst_out  => rst_pulse
   );
 
-  rst_test <= rst_bt OR timer_intr;
+  rst_test <= rst_bt OR rst_Watchdog;
 
 
   PULSE_EXTENDER: PulseExtender

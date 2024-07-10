@@ -2,7 +2,7 @@
 #include <stdarg.h>
 
 // constante endereços programa usuario
-void (*UserMainPtr)(void) = (void(*)(void))0x1B50;
+void (*UserMainPtr)(void) = (void(*)(void))0x1BCC;
 
 int lastReceiveSize = 0;
 
@@ -37,7 +37,7 @@ int main()
         
         int i = 0;
         int recvData = 0;
-        int instAddr = 0x90001B50;
+        int instAddr = 0x90001BCC;
         
         shiftCount = 0;
         

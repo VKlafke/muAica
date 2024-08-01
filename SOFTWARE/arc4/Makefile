@@ -45,11 +45,11 @@ LFLAGS = -T link.ld
 	@echo
 	@echo Assembling $(SYSCALL_INPUT)
 	$(CC_RISCV) -c $(SYSCALL_INPUT) $(SYSCALL_CFLAGS) -o $(SYSCALL_OUTPUT)
-
+	
 	@echo
 	@echo Compiling $(MULIB_INPUT)
 	$(CC_RISCV) -c $(MULIB_INPUT) $(MULIB_CFLAGS) -o $(MULIB_OUTPUT)
-    	
+    
 	@echo
 	@echo Compiling $(addsuffix .c, $(MAIN_SRC))
 	$(CC_RISCV) -c $(addsuffix .c, $@) $(CFLAGS) -o $(BUILD_OUTPUT)

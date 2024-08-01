@@ -31,10 +31,10 @@ SYSCALL_CFLAGS = -march=rv32i_zicsr_zifencei -mabi=ilp32 -mstrict-align -mprefer
 
 MULIB_OUTPUT = obj/mulib.obj
 MULIB_INPUT = src/muLib.c
-MULIB_CFLAGS = -march=rv32im_zicsr_zifencei -mabi=ilp32 -mstrict-align -mpreferred-stack-boundary=3 -nostartfiles -Wall -Wl,--build-i=none -fno-zero-initialized-in-bss
+MULIB_CFLAGS = -march=rv32im_zicsr_zifencei -mabi=ilp32 -mstrict-align -mpreferred-stack-boundary=3 -nostartfiles -Wall -Wl,--build-i=none
 
 DFLAGS = -D -Mnumeric,no-aliases
-CFLAGS = -march=rv32im_zicsr_zifencei -mabi=ilp32 -mstrict-align -mpreferred-stack-boundary=3 -nostartfiles -Wall -Wl,--build-i=none -fno-zero-initialized-in-bss
+CFLAGS = -march=rv32im_zicsr_zifencei -mabi=ilp32 -mstrict-align -mpreferred-stack-boundary=3 -nostartfiles -Wall -Wl,--build-i=none
 LFLAGS = -T link.ld
 
 %:
@@ -45,11 +45,11 @@ LFLAGS = -T link.ld
 	@echo
 	@echo Assembling $(SYSCALL_INPUT)
 	$(CC_RISCV) -c $(SYSCALL_INPUT) $(SYSCALL_CFLAGS) -o $(SYSCALL_OUTPUT)
-
+	
 	@echo
 	@echo Compiling $(MULIB_INPUT)
 	$(CC_RISCV) -c $(MULIB_INPUT) $(MULIB_CFLAGS) -o $(MULIB_OUTPUT)
-    	
+    
 	@echo
 	@echo Compiling $(addsuffix .c, $(MAIN_SRC))
 	$(CC_RISCV) -c $(addsuffix .c, $@) $(CFLAGS) -o $(BUILD_OUTPUT)

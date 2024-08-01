@@ -29,6 +29,8 @@ volatile int Number_BCD[16] =
     0x8E0 // f
 };
 
+// 16 ms timer callback
+// Makes use of time delays to fit the bcd refresh rate.
 void CallbackTimer()
 {   
 	int write = Number_BCD[dispCount[0]];
@@ -64,12 +66,48 @@ void CallbackTimer()
     
 }
 
+// 4 ms timer callback
+// no wasted time to fit the refresh rate when done this way.
+int lastBcd = 0;
+void CallbackTimer2()
+{   
+	int write = Number_BCD[dispCount[lastBcd]];
+	
+    if(lastBcd == 0)
+    {
+        // Left most 7 seg
+        write = write | 0x7;
+	}
+    else if(lastBcd == 1)
+    {   
+        write = write | 0xB;
+    }
+    else if(lastBcd == 2)
+    {
+        write = write | 0xD;
+    }
+    else 
+    {
+        write = write | 0xE;
+    }
+    
+	BDPortWrite(write);
+    
+    lastBcd++;
+    
+    if(lastBcd > 3)
+        lastBcd = 0;
+}
+
+// Decrement user count 
 void CallbackButtonC4()
 {
     int i = 0;
+    
+    UARTPrint("Callback C4\n");
      
 	 // Debounce
-	 while(i < 900000)
+	 while(i < 800000)
 		 i++;
      
      countRight--;
@@ -81,32 +119,25 @@ void CallbackButtonC4()
      dispCount[3] = countRight % 10;
 }
 
-#define WATCHDOG_BASE_CLK (*((volatile int*) 0x80006000))
-#define WATCHDOG_COUNT    (*((volatile int*) 0x80006010))
-#define WATCHDOG_ENABLE   (*((volatile char*) 0x80006020))	
-#define WATCHDOG_KICK     (*((volatile char*) 0x80006020))	
-
+// Increment user count
 void CallbackButtonD9()
 {
     int i = 0;
     
-    UARTPrint("Call_D9\n");
+    UARTPrint("Callback D9\n");
      
 	 // Debounce
 	 while(i < 900000)
          i++;
      
-     //countRight++;
+     countRight++;
      
-     //if(countRight > 99)
-       //  countRight = 0;
+     if(countRight > 99)
+        countRight = 0;
 
-     //dispCount[2] = countRight / 10;
-     //dispCount[3] = countRight % 10;
+     dispCount[2] = countRight / 10;
+     dispCount[3] = countRight % 10;
      
-     WATCHDOG_BASE_CLK = 50000;
-     WATCHDOG_COUNT  = 10000;
-     WATCHDOG_ENABLE = 1;
 }
     
 int main()
@@ -117,7 +148,7 @@ int main()
 	//															//
 	//	Config: 0xFE000000, last 7 bits are input				//
 	//  Enable: 0xFFFFFFFF										//
-	//	  INTR: 0xC0000000, last two bits connected to PIC 	//
+	//	  INTR: 0xC0000000, last two bits connected to PIC    	//
 	//////////////////////////////////////////////////////////////
 
 	int BDP_Cfg  = 0xFF000000;
@@ -129,7 +160,7 @@ int main()
 	UARTPrint("SETUP BD PORT\n");
     
     // Timer callback to drive the displays 
-	ExtIntrRegisterCallback(1, CallbackTimer);
+	ExtIntrRegisterCallback(1, CallbackTimer2);
     
     // Button callback 
 	ExtIntrRegisterCallback(7, CallbackButtonD9);
@@ -142,12 +173,20 @@ int main()
     UARTPrint("SETUP PIC \n");
     
     // TIMER config
-    TimerSetBaseClock(50000); // 50000 kHz (50 MHz)
-    TimerSetCount(16); // 16 ms
+    TimerSetBaseClock(50000); // reset every 1/1000 of a second.
+    TimerSetCount(4); // 4 ms
     TimerSetEnabled(1);
 
 	UARTPrint("SETUP TIMER\n");
     
+    // Watchdog config         
+    WatchdogSetBaseClock(50000);
+    WatchdogSetCount(1000); // 1000 ms
+    WatchdogSetEnabled(1);
+    
+	UARTPrint("SETUP WATCHDOG\n");
+    
+    // Second counter var
     int secCount = 0;
  
 	do
@@ -158,8 +197,11 @@ int main()
         if(GetString(&str))
             UARTPrint(str);
         
-        
-        // Increase counter 
+        // Only signal watchdog while user controlled count is < 10
+        if(countRight < 10)
+            WatchdogKick();
+               
+        // Increase left side counter 
         if(secCount > 100000)
         {
             secCount = 0;

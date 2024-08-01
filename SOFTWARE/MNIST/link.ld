@@ -5,7 +5,6 @@ MEMORY
 }
 
 
-
 /* Executable object file sections */
 SECTIONS 
 {
@@ -26,5 +25,5 @@ SECTIONS
     } > DATA_MEMORY
     
     /* Set the stack pointer to the last address of the DATA_MEMORY */
-  _stack_ptr = ORIGIN(DATA_MEMORY) + LENGTH(DATA_MEMORY) - 4; 
+  _stack_ptr = ORIGIN(DATA_MEMORY) + LENGTH(DATA_MEMORY) - 4;
 }

@@ -2,7 +2,7 @@
 #include <stdarg.h>
 
 // constante endereços programa usuario
-void (*UserMainPtr)(void) = (void(*)(void))0x1BCC;
+void (*UserMainPtr)(void) = (void(*)(void))0x1CC8;
 
 int lastReceiveSize = 0;
 
@@ -13,7 +13,7 @@ int main()
     while(1)
     {
         // Send boot message
-        KernelUARTTX("->");   
+        KernelUARTTX("muAICA ready.\n");   
   
         int shiftCount = 24;
         int recvSize = 0;
@@ -37,7 +37,7 @@ int main()
         
         int i = 0;
         int recvData = 0;
-        int instAddr = 0x90001BCC;
+        int instAddr = 0x90001CC8;
         
         shiftCount = 0;
         
@@ -91,7 +91,7 @@ int main()
         // Receive .data section        
         i = 0;
         recvData = 0;
-        int dataAddr = 0x00000800;
+        int dataAddr = 0x000000800;
         
         shiftCount = 0;
         

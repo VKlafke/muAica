@@ -11,6 +11,7 @@ _bootloader_csr_:
 
     # trap enable configuration
     li      x30, 0x00000800
+    
     #csrs    mie, x30        # interrupts enabled
 	#csrrsi	x0, mie,  8 	# exceptions enabled
     #csrsi   mstatus, 8      # traps enabled
@@ -208,7 +209,7 @@ kernel_trap_entry:
 	
     sw	a0, 30 * 4(sp)	# save mcause
 	
-    jal KernelTrapReentryHandler
+    jal KernelTrapHandler
     
     # return value is the PC to resume
     csrw mepc, a0

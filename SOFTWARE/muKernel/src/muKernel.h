@@ -24,7 +24,7 @@
 #define WATCHDOG_BASE_CLK (*((volatile int*) 0x80006000))
 #define WATCHDOG_COUNT    (*((volatile int*) 0x80006010))
 #define WATCHDOG_ENABLE   (*((volatile char*) 0x80006020))	
-#define WATCHDOG_KICK     (*((volatile char*) 0x80006020))	
+#define WATCHDOG_KICK     (*((volatile char*) 0x80006030))	
 
 // Default values
 #define MAX_EXT_INTR 8
@@ -71,18 +71,44 @@ typedef void (*callback_t)();
 
 // CSR access functions 
 
-static inline uint32_t r_stvec()
+// Machine Trap-Vector Base Addr
+static inline uint32_t r_mtvec()
 {
   uint32_t x;
-  asm volatile("csrr %0, stvec" : "=r" (x) );
+  asm volatile("csrr %0, mtvec" : "=r" (x) );
   return x;
 }
 
-static inline void w_stvec(uint32_t x)
+static inline void w_mtvec(uint32_t x)
 {
-  asm volatile("csrw stvec, %0" : : "r" (x));
+  asm volatile("csrw mtvec, %0" : : "r" (x));
 }
 
+// Machine Status Register 
+static inline uint64_t r_mstatus()
+{
+  uint64_t x;
+  asm volatile("csrr %0, mstatus" : "=r" (x) );
+  return x;
+}
+
+static inline void w_mstatus(uint64_t x)
+{
+  asm volatile("csrw mstatus, %0" : : "r" (x));
+}
+
+// Machine Interrupt Enable Register 
+static inline uint64_t r_mie()
+{
+  uint64_t x;
+  asm volatile("csrr %0, mie" : "=r" (x) );
+  return x;
+}
+
+static inline void w_mie(uint64_t x)
+{
+  asm volatile("csrw mie, %0" : : "r" (x));
+}
 
 // Kernel functions
 
@@ -107,7 +133,7 @@ int KernelExceptionHandler(int mode, int mcause, int mepc, int ecallFunc, int a0
 // Dispatches external interrupts to the appropriate handler 
 // Reads IRQ from PIC then calls the configured callback,
 // if callback not set, defaults to Kernel_Ext_Intr_default() 
-void KernelExtIntrDispatcher();
+void KernelExtIntrDispatcher(int irqID);
 
 // Register external intr handler callbacks from user 
 int KernelExtIntrHandlerSet(int n, callback_t handler_callback);
@@ -184,7 +210,7 @@ int KernelGetString(char** pStr);
 // Set the base clock used for timer calculations
 void KernelTimerSetClock(int clk);
 
-// Set the timer count target value, in ms
+// Set the timer count target value
 void KernelTimerSetCount(int cnt);
 
 // Enable / disable the timer 
@@ -192,6 +218,27 @@ void KernelTimerSetEnabled(int enable);
 
 //
 //////////////////////////
+
+//////////////////////////////
+//
+// WATCHDOG TIMER
+//
+
+// Set the base clock used for timer calculations (prescaler)
+void KernelWatchdogSetClock(int clk);
+
+// Set the timer count target value
+void KernelWatchdogSetCount(int cnt);
+
+// Enable / disable the watchdog 
+void KernelWatchdogSetEnabled(int enable);
+
+// Reset the watchdog count 
+void KernelWatchdogKick();
+							//
+							//
+							//
+//////////////////////////////
 
 /////////////////////////
 //
